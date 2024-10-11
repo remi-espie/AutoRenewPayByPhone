@@ -2,11 +2,10 @@ mod config;
 mod paybyphone;
 mod types;
 
-use std::error::Error;
 use clap::Parser;
+use std::error::Error;
 
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum Action {
     Park,
     Renew,
@@ -23,7 +22,7 @@ impl From<String> for Action {
             "check" => Action::Check,
             "cancel" => Action::Cancel,
             "vehicles" => Action::Vehicles,
-            _ => panic!("Invalid action")
+            _ => panic!("Invalid action"),
         }
     }
 }
@@ -38,7 +37,7 @@ struct Args {
     /// Account name from config.yaml
     #[arg(short = 'x', long)]
     account: String,
-    
+
     /// Duration in minutes
     #[arg(short, long)]
     duration: Option<i32>,
@@ -51,7 +50,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     log::info!("Reading user config...");
     let config = config::read("config.yaml")?;
     log::info!("Initializing PayByPhone...");
-    let account = config.accounts.iter().find(|a| a.name == args.account).unwrap_or_else(|| panic!("Account not found"));
+    let account = config
+        .accounts
+        .iter()
+        .find(|a| a.name == args.account)
+        .unwrap_or_else(|| panic!("Account not found"));
     let mut pay_by_phone = paybyphone::PayByPhone::new(
         account.plate.clone(),
         account.lot,
@@ -87,7 +90,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         Action::Check => {
             log::info!("Checking...");
-            match pay_by_phone.check().await { 
+            match pay_by_phone.check().await {
                 Ok(sessions) => {
                     println!("{:?}", sessions);
                 }

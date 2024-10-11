@@ -1,9 +1,9 @@
+use crate::types::{ParkedVehicle, ParkingSession, Vehicle};
+use chrono::{DateTime, Utc};
 use regex::Regex;
 use reqwest::{Client, Method, Response};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use chrono::{DateTime, Utc};
-use crate::types::{ParkingSession, ParkedVehicle, Vehicle};
 
 pub struct PayByPhone {
     plate: String,
@@ -125,7 +125,10 @@ impl PayByPhone {
                                 self.auth = serde_json::from_str(&json).unwrap();
                                 log::info!("Getting user account ID...");
                                 match self
-                                    .get::<String>("https://consumer.paybyphoneapis.com/parking/accounts", None)
+                                    .get::<String>(
+                                        "https://consumer.paybyphoneapis.com/parking/accounts",
+                                        None,
+                                    )
                                     .await
                                 {
                                     Ok(resp) => match resp.text().await {
@@ -151,11 +154,20 @@ impl PayByPhone {
         Ok(())
     }
 
-    pub async fn get<T: Serialize + ?Sized>(&self, url: &str, params: Option<&T>) -> Result<Response, Box<dyn Error>> {
+    pub async fn get<T: Serialize + ?Sized>(
+        &self,
+        url: &str,
+        params: Option<&T>,
+    ) -> Result<Response, Box<dyn Error>> {
         self.request(Method::GET, url, params).await
     }
 
-    pub async fn request<T: Serialize + ?Sized>(&self, method: Method, url: &str, params: Option<&T>) -> Result<Response, Box<dyn Error>> {
+    pub async fn request<T: Serialize + ?Sized>(
+        &self,
+        method: Method,
+        url: &str,
+        params: Option<&T>,
+    ) -> Result<Response, Box<dyn Error>> {
         let mut request = self
             .client
             .request(method.clone(), url)
@@ -176,7 +188,7 @@ impl PayByPhone {
                     " ".parse().unwrap(),
                     self.auth.clone().unwrap().access_token,
                 ]
-                    .concat(),
+                .concat(),
             );
 
         if let Some(params) = params {
@@ -187,15 +199,11 @@ impl PayByPhone {
                 Method::POST => {
                     request = request.form(params);
                 }
-                _ => {
-                }
+                _ => {}
             }
         }
 
-        match request
-            .send()
-            .await
-        {
+        match request.send().await {
             Ok(resp) => Ok(resp),
             Err(e) => Err(Box::new(e)),
         }
@@ -232,27 +240,25 @@ impl PayByPhone {
     }
 
     async fn get_parking_session(&self) -> Result<Vec<ParkingSession>, Box<dyn Error>> {
-        match self.get(format!("https://consumer.paybyphoneapis.com/parking/accounts/{}/sessions", self.account_id.clone().unwrap()).as_str(), Some(&[("periodType","Current")])).await {
-            Ok(resp) => {
-                match resp.text().await {
-                    Ok(json) => {
-                        match serde_json::from_str::<Vec<ParkingSession>>(&json) {
-                            Ok(sessions) => {
-                                Ok(sessions)
-                            }
-                            Err(e) => {
-                                Err(Box::new(e))
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        Err(Box::new(e))
-                    }
-                }
-            }
-            Err(e) => {
-                Err(e)
-            }
+        match self
+            .get(
+                format!(
+                    "https://consumer.paybyphoneapis.com/parking/accounts/{}/sessions",
+                    self.account_id.clone().unwrap()
+                )
+                .as_str(),
+                Some(&[("periodType", "Current")]),
+            )
+            .await
+        {
+            Ok(resp) => match resp.text().await {
+                Ok(json) => match serde_json::from_str::<Vec<ParkingSession>>(&json) {
+                    Ok(sessions) => Ok(sessions),
+                    Err(e) => Err(Box::new(e)),
+                },
+                Err(e) => Err(Box::new(e)),
+            },
+            Err(e) => Err(e),
         }
     }
 
@@ -260,18 +266,15 @@ impl PayByPhone {
         log::info!("Checking user parking sessions...");
         match self.get_parking_session().await {
             Ok(session) => {
-                match session.iter().find(|s| s.vehicle.license_plate == self.plate) {
-                    Some(s) => {
-                        Ok(s.clone())
-                    }
-                    None => {
-                        Err(Box::from("No active parking session found".to_string()))
-                    }
+                match session
+                    .iter()
+                    .find(|s| s.vehicle.license_plate == self.plate)
+                {
+                    Some(s) => Ok(s.clone()),
+                    None => Err(Box::from("No active parking session found".to_string())),
                 }
             }
-            Err(e) => {
-                Err(e)
-            }
+            Err(e) => Err(e),
         }
     }
 
