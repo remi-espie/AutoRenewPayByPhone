@@ -1,20 +1,21 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct Accounts {
     pub(crate) accounts: Vec<Config>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct Config {
     pub(crate) name: String,
     pub(crate) plate: String,
     pub(crate) lot: i32,
+    #[serde(skip_serializing)]
     pub(crate) pay_by_phone: PayByPhone,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct PayByPhone {
     pub(crate) login: String,
     pub(crate) password: String,
