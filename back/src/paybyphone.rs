@@ -236,7 +236,7 @@ impl PayByPhone {
     pub(crate) async fn park(
         &self,
         duration: i16,
-    ) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Quote, Box<dyn Error + Send + Sync>> {
         // match self.check().await {
         //     Ok(session) => {
         //         log::info!("User already parked");
@@ -277,7 +277,7 @@ impl PayByPhone {
                             });
                         }
                         match self.post_quote(quote, 15, rate.as_str()).await {
-                            Ok(session) => Ok(session),
+                            Ok(_) => Ok(quote),
                             Err(e) => Err(e),
                         }
                     }
@@ -329,7 +329,7 @@ impl PayByPhone {
         quote: Quote,
         duration: i16,
         rate: &str,
-    ) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         log::info!("Post quote...");
         match self
             .post(
@@ -363,10 +363,7 @@ impl PayByPhone {
             Ok(resp) => match resp.status() {
                 reqwest::StatusCode::ACCEPTED => {
                     log::info!("Parking successful");
-                    match self.check().await {
-                        Ok(session) => Ok(session),
-                        Err(e) => Err(e),
-                    }
+                    Ok(())
                 }
                 _ => Err(format!("Failed to park: {:?}", resp.text().await).into()),
             },
