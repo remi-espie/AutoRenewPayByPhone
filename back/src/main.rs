@@ -76,7 +76,6 @@ async fn main() {
             auth_middleware(req, next, bearer_token.clone())
         }));
     // .route("/cancel", post(|| async { Json(StatusCode::OK) }))
-    // .route("/renew", post(|| async { Json(StatusCode::OK) }))
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", args.port))
         .await
