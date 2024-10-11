@@ -2,6 +2,7 @@ use crate::types::{
     Account, Auth, Duration, GetParkingSession, GetQuote, GetRateOptions, ParkingOption,
     ParkingSession, PaymentMethod, PaymentPayload, PostQuote, Quote, Vehicle,
 };
+use async_recursion::async_recursion;
 use chrono::{DateTime, Utc};
 use regex::Regex;
 use reqwest::{Client, Method, Response};
@@ -231,6 +232,7 @@ impl PayByPhone {
         }
     }
 
+    #[async_recursion]
     pub(crate) async fn park(
         &self,
         duration: i16,
@@ -243,26 +245,36 @@ impl PayByPhone {
         //     Err(_) => {
         log::info!("Parking user...");
         match self.get_rate_option().await {
-            Ok(options) => {
+            Ok(parking_options) => {
                 log::info!("Got rate options");
-                let rate = options[0].clone().rate_option_id;
-                let max_free_duration = options[0].restriction_periods[0].max_stay.quantity;
-                let min_duration = if duration > max_free_duration {
-                    max_free_duration
-                } else {
-                    duration
-                };
-                match self.get_quote(min_duration, rate.as_str()).await {
+                let rate = parking_options[0].clone().rate_option_id;
+                // let max_free_duration = parking_options[0].restriction_periods[0].max_stay.quantity;
+                // let min_duration = if duration > max_free_duration {
+                //     max_free_duration
+                // } else {
+                //     duration
+                // };
+                match self.get_quote(15, rate.as_str()).await {
                     Ok(quote) => {
-                        let wished_time =
-                            quote.parking_start_time + chrono::Duration::minutes(duration as i64);
-                        if wished_time > quote.parking_expiry_time {
-                            self.renew(
-                                duration - max_free_duration,
-                                quote.parking_expiry_time - chrono::Duration::minutes(1),
-                            )
+                        if quote.parking_start_time + chrono::Duration::minutes(duration as i64) > quote.parking_expiry_time {
+                            let cloned = self.clone();
+                            tokio::spawn(async move {
+                                let expiry_time = quote.parking_expiry_time - chrono::Duration::minutes(1);
+                                let new_duration = (quote.parking_start_time + chrono::Duration::minutes(duration as i64) + chrono::Duration::minutes(1) - quote.parking_expiry_time).num_minutes();
+                                    log::info!(
+                                        "Sleeping until {} for renewal of {} for another {} minutes...",
+                                        expiry_time,
+                                        cloned.plate,
+                                        new_duration,
+                                    );
+                                if new_duration <= 0 {
+                                    return;
+                                }
+                                tokio::time::sleep_until(cloned.timestamp_to_instant(expiry_time)).await;
+                                let _ = cloned.park(new_duration as i16).await;
+                            });
                         }
-                        match self.post_quote(quote, duration, rate.as_str()).await {
+                        match self.post_quote(quote, 15, rate.as_str()).await {
                             Ok(session) => Ok(session),
                             Err(e) => Err(e),
                         }
@@ -358,22 +370,6 @@ impl PayByPhone {
             },
             Err(e) => Err(e),
         }
-    }
-
-    pub(crate) fn renew(
-        &self,
-        duration: i16,
-        expiry_time: DateTime<Utc>,
-    ) {
-        let cloned = self.clone();
-        async move {
-            log::info!("Sleeping until {} for renewal of {}...", expiry_time, cloned.plate);
-            tokio::time::sleep_until(cloned.timestamp_to_instant(expiry_time)).await;
-            if duration <= 0 {
-                return cloned.check().await;
-            }
-            cloned.park(duration).await
-        };
     }
 
     fn timestamp_to_instant(&self, timestamp: DateTime<Utc>) -> Instant {
@@ -474,7 +470,7 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn cancel(&self) {
-        todo!()
-    }
+    // pub(crate) async fn cancel(&self) {
+    //     todo!()
+    // }
 }
