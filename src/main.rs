@@ -85,8 +85,8 @@ async fn main() {
     tokio::spawn(async move {
         axum::serve(listener, app).await.unwrap();
     })
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 }
 
 async fn initalize_pay_by_phone(

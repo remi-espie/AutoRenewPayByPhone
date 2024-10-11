@@ -248,29 +248,31 @@ impl PayByPhone {
             Ok(parking_options) => {
                 log::info!("Got rate options");
                 let rate = parking_options[0].clone().rate_option_id;
-                // let max_free_duration = parking_options[0].restriction_periods[0].max_stay.quantity;
-                // let min_duration = if duration > max_free_duration {
-                //     max_free_duration
-                // } else {
-                //     duration
-                // };
                 match self.get_quote(15, rate.as_str()).await {
                     Ok(quote) => {
-                        if quote.parking_start_time + chrono::Duration::minutes(duration as i64) > quote.parking_expiry_time {
+                        if quote.parking_start_time + chrono::Duration::minutes(duration as i64)
+                            > quote.parking_expiry_time
+                        {
                             let cloned = self.clone();
                             tokio::spawn(async move {
-                                let expiry_time = quote.parking_expiry_time - chrono::Duration::minutes(1);
-                                let new_duration = (quote.parking_start_time + chrono::Duration::minutes(duration as i64) + chrono::Duration::minutes(1) - quote.parking_expiry_time).num_minutes();
-                                    log::info!(
-                                        "Sleeping until {} for renewal of {} for another {} minutes...",
-                                        expiry_time,
-                                        cloned.plate,
-                                        new_duration,
-                                    );
+                                let expiry_time =
+                                    quote.parking_expiry_time - chrono::Duration::minutes(1);
+                                let new_duration = (quote.parking_start_time
+                                    + chrono::Duration::minutes(duration as i64)
+                                    + chrono::Duration::minutes(1)
+                                    - quote.parking_expiry_time)
+                                    .num_minutes();
+                                log::info!(
+                                    "Sleeping until {} for renewal of {} for another {} minutes...",
+                                    expiry_time,
+                                    cloned.plate,
+                                    new_duration,
+                                );
                                 if new_duration <= 0 {
                                     return;
                                 }
-                                tokio::time::sleep_until(cloned.timestamp_to_instant(expiry_time)).await;
+                                tokio::time::sleep_until(cloned.timestamp_to_instant(expiry_time))
+                                    .await;
                                 let _ = cloned.park(new_duration as i16).await;
                             });
                         }
