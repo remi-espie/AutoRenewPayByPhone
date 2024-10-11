@@ -106,7 +106,7 @@ pub struct Quote {
     #[serde(rename = "parkingStartTime")]
     pub(crate) parking_start_time: DateTime<Utc>,
     #[serde(rename = "parkingExpiryTime")]
-    parking_expiry_time: DateTime<Utc>,
+    pub(crate) parking_expiry_time: DateTime<Utc>,
     #[serde(rename = "parkingDurationAdjustment")]
     parking_duration_adjustment: String,
     #[serde(rename = "licensePlate")]
@@ -172,7 +172,7 @@ pub struct ParkingOption {
     #[serde(rename = "acceptedTimeUnits")]
     accepted_time_units: Vec<String>,
     #[serde(rename = "restrictionPeriods")]
-    restriction_periods: Vec<RestrictionPeriod>,
+    pub(crate) restriction_periods: Vec<RestrictionPeriod>,
     #[serde(rename = "availableTimeUnitsWithRestrictions")]
     available_time_units_with_restrictions: AvailableTimeUnitsWithRestrictions,
     #[serde(rename = "timeSteps")]
@@ -196,7 +196,7 @@ pub struct ParkingOption {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Duration {
-    pub(crate) quantity: u16,
+    pub(crate) quantity: i16,
     #[serde(rename = "timeUnit")]
     pub(crate) time_unit: String,
 }
@@ -208,7 +208,7 @@ pub struct RestrictionPeriod {
     #[serde(rename = "endTime")]
     end_time: DateTime<FixedOffset>,
     #[serde(rename = "maxStay")]
-    max_stay: Duration,
+    pub(crate) max_stay: Duration,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -272,7 +272,7 @@ pub struct GetQuote {
     #[serde(rename = "rateOptionId")]
     pub(crate) rate_option_id: String,
     #[serde(rename = "durationQuantity")]
-    pub(crate) duration_quantity: u16,
+    pub(crate) duration_quantity: i16,
     #[serde(rename = "durationTimeUnit")]
     pub(crate) duration_time_unit: String,
 }

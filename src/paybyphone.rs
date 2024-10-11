@@ -2,12 +2,15 @@ use crate::types::{
     Account, Auth, Duration, GetParkingSession, GetQuote, GetRateOptions, ParkingOption,
     ParkingSession, PaymentMethod, PaymentPayload, PostQuote, Quote, Vehicle,
 };
+use chrono::{DateTime, Utc};
 use regex::Regex;
 use reqwest::{Client, Method, Response};
 use serde::Serialize;
 use serde_json::json;
 use std::error::Error;
+use tokio::time::Instant;
 
+#[derive(Debug, Clone)]
 pub struct PayByPhone {
     plate: String,
     lot: i32,
@@ -228,7 +231,10 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn park(&self, duration: u16) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
+    pub(crate) async fn park(
+        &self,
+        duration: i16,
+    ) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
         // match self.check().await {
         //     Ok(session) => {
         //         log::info!("User already parked");
@@ -240,11 +246,40 @@ impl PayByPhone {
             Ok(options) => {
                 log::info!("Got rate options");
                 let rate = options[0].clone().rate_option_id;
-                match self.get_quote(duration, rate.as_str()).await {
-                    Ok(quote) => match self.post_quote(quote, duration, rate.as_str()).await {
-                        Ok(session) => Ok(session),
-                        Err(e) => Err(e),
-                    },
+                let max_free_duration = options[0].restriction_periods[0].max_stay.quantity;
+                let min_duration = if duration > max_free_duration {
+                    max_free_duration
+                } else {
+                    duration
+                };
+                match self.get_quote(min_duration, rate.as_str()).await {
+                    Ok(quote) => {
+                        let wished_time =
+                            quote.parking_start_time + chrono::Duration::minutes(duration as i64);
+                        if wished_time > quote.parking_expiry_time {
+                            let cloned_self = self.clone();
+                            tokio::spawn(async move {
+                                match cloned_self
+                                    .renew(
+                                        duration - max_free_duration,
+                                        quote.parking_expiry_time - chrono::Duration::minutes(1),
+                                    )
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        log::info!("Renewal successful for {}", cloned_self.plate);
+                                    }
+                                    Err(e) => {
+                                        log::error!("Failed to renew: {:?}", e);
+                                    }
+                                }
+                            });
+                        }
+                        match self.post_quote(quote, duration, rate.as_str()).await {
+                            Ok(session) => Ok(session),
+                            Err(e) => Err(e),
+                        }
+                    }
                     Err(e) => Err(e),
                 }
             }
@@ -254,7 +289,11 @@ impl PayByPhone {
         // }
     }
 
-    async fn get_quote(&self, duration: u16, rate: &str) -> Result<Quote, Box<dyn Error + Send + Sync>> {
+    async fn get_quote(
+        &self,
+        duration: i16,
+        rate: &str,
+    ) -> Result<Quote, Box<dyn Error + Send + Sync>> {
         log::info!("Getting quote...");
         match self
             .get(
@@ -287,7 +326,7 @@ impl PayByPhone {
     async fn post_quote(
         &self,
         quote: Quote,
-        duration: u16,
+        duration: i16,
         rate: &str,
     ) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
         log::info!("Post quote...");
@@ -334,11 +373,36 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn renew(&self) {
-        todo!()
+    pub(crate) async fn renew(
+        &self,
+        duration: i16,
+        expiry_time: DateTime<Utc>,
+    ) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
+        tokio::time::sleep_until(self.timestamp_to_instant(expiry_time)).await;
+        if duration <= 0 {
+            return self.check().await;
+        }
+        self.park(duration).await
     }
 
-    async fn get_parking_session(&self) -> Result<Vec<ParkingSession>, Box<dyn Error + Send + Sync>> {
+    fn timestamp_to_instant(&self, timestamp: DateTime<Utc>) -> Instant {
+        let now = Utc::now();
+        let duration = if timestamp > now {
+            timestamp - now
+        } else {
+            now - timestamp
+        };
+        let dur = tokio::time::Duration::from_secs(duration.num_seconds() as u64);
+        if timestamp > now {
+            Instant::now() + dur
+        } else {
+            Instant::now() - dur
+        }
+    }
+
+    async fn get_parking_session(
+        &self,
+    ) -> Result<Vec<ParkingSession>, Box<dyn Error + Send + Sync>> {
         match self
             .get(
                 format!(
@@ -378,8 +442,8 @@ impl PayByPhone {
             Err(e) => Err(e),
         }
     }
-    
-    pub(crate) async fn quote(&self, duration: u16) -> Result<Quote, Box<dyn Error + Send + Sync>> {
+
+    pub(crate) async fn quote(&self, duration: i16) -> Result<Quote, Box<dyn Error + Send + Sync>> {
         match self.get_rate_option().await {
             Ok(options) => {
                 let rate = options[0].clone().rate_option_id;
