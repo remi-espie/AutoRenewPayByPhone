@@ -262,8 +262,11 @@ impl PayByPhone {
                                     - chrono::Duration::minutes(1)
                                     - quote.parking_expiry_time)
                                     .num_minutes();
+                                let sleeping_dur = cloned.timestamp_to_duration(expiry_time);
                                 log::info!(
-                                    "Sleeping until {} for renewal of {} for another {} minutes...",
+                                    "It is {}; Sleeping for {:?} until {} for renewal of {} for another {} minutes...",
+                                    Utc::now(),
+                                    sleeping_dur,
                                     expiry_time,
                                     cloned.plate,
                                     new_duration,
@@ -271,7 +274,7 @@ impl PayByPhone {
                                 if new_duration <= 0 {
                                     return;
                                 }
-                                tokio::time::sleep_until(cloned.timestamp_to_instant(expiry_time))
+                                tokio::time::sleep(sleeping_dur)
                                     .await;
                                 let _ = cloned.park(new_duration as i16).await;
                             });
@@ -371,19 +374,14 @@ impl PayByPhone {
         }
     }
 
-    fn timestamp_to_instant(&self, timestamp: DateTime<Utc>) -> Instant {
+    fn timestamp_to_duration(&self, timestamp: DateTime<Utc>) -> std::time::Duration {
         let now = Utc::now();
         let duration = if timestamp > now {
             timestamp - now
         } else {
             now - timestamp
         };
-        let dur = tokio::time::Duration::from_secs(duration.num_seconds() as u64);
-        if timestamp > now {
-            Instant::now() + dur
-        } else {
-            Instant::now() - dur
-        }
+        tokio::time::Duration::from_secs(duration.num_seconds() as u64)
     }
 
     async fn get_parking_session(
