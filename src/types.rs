@@ -196,7 +196,7 @@ pub struct ParkingOption {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Duration {
-    pub(crate) quantity: i32,
+    pub(crate) quantity: u16,
     #[serde(rename = "timeUnit")]
     pub(crate) time_unit: String,
 }
@@ -272,7 +272,7 @@ pub struct GetQuote {
     #[serde(rename = "rateOptionId")]
     pub(crate) rate_option_id: String,
     #[serde(rename = "durationQuantity")]
-    pub(crate) duration_quantity: i32,
+    pub(crate) duration_quantity: u16,
     #[serde(rename = "timeUnit")]
     pub(crate) time_unit: String,
 }

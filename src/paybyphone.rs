@@ -144,7 +144,7 @@ impl PayByPhone {
         &self,
         url: &str,
         params: Option<&T>,
-    ) -> Result<Response, Box<dyn Error>> {
+    ) -> Result<Response, Box<dyn Error + Send + Sync>> {
         self.request(Method::GET, url, params).await
     }
 
@@ -152,7 +152,7 @@ impl PayByPhone {
         &self,
         url: &str,
         params: Option<&T>,
-    ) -> Result<Response, Box<dyn Error>> {
+    ) -> Result<Response, Box<dyn Error + Send + Sync>> {
         self.request(Method::POST, url, params).await
     }
 
@@ -161,7 +161,7 @@ impl PayByPhone {
         method: Method,
         url: &str,
         params: Option<&T>,
-    ) -> Result<Response, Box<dyn Error>> {
+    ) -> Result<Response, Box<dyn Error + Send + Sync>> {
         let mut request = self
             .client
             .request(method.clone(), url)
@@ -189,6 +189,7 @@ impl PayByPhone {
             match method {
                 Method::GET => {
                     request = request.query(params);
+                    log::debug!("Request: {:?}", json!(params));
                 }
                 Method::POST => {
                     log::debug!("Request: {:?}", json!(params));
@@ -205,7 +206,7 @@ impl PayByPhone {
         }
     }
 
-    pub async fn get_vehicles(&self) -> Result<Vec<Vehicle>, Box<dyn Error>> {
+    pub async fn get_vehicles(&self) -> Result<Vec<Vehicle>, Box<dyn Error + Send + Sync>> {
         log::info!("Getting user vehicles...");
         match self.get::<String>("https://consumer.paybyphoneapis.com/identity/profileservice/v1/members/vehicles/paybyphone", None).await {
             Ok(resp) => {
@@ -227,7 +228,7 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn park(&self, duration: i32) -> Result<ParkingSession, Box<dyn Error>> {
+    pub(crate) async fn park(&self, duration: u16) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
         // match self.check().await {
         //     Ok(session) => {
         //         log::info!("User already parked");
@@ -235,26 +236,25 @@ impl PayByPhone {
         //     }
         //     Err(_) => {
         log::info!("Parking user...");
-        match self.get_rate_option().await {
-            Ok(options) => {
-                log::info!("Got rate options");
-                let rate = options[0].clone().rate_option_id;
-                match self.get_quote(duration, &rate).await {
-                    Ok(quote) => match self.post_quote(quote, duration, &rate).await {
+        // match self.get_rate_option().await {
+        //     Ok(options) => {
+        //         log::info!("Got rate options");
+        //         let rate = options[0].clone().rate_option_id;
+                match self.get_quote(duration, "815042486").await {
+                    Ok(quote) => match self.post_quote(quote, duration,"815042486").await {
                         Ok(session) => Ok(session),
                         Err(e) => Err(e),
                     },
                     Err(e) => Err(e),
                 }
-            }
-            Err(e) => Err(e),
-        }
-
+            // }
+            // Err(e) => Err(e),
+        // }
         // }
         // }
     }
 
-    async fn get_quote(&self, duration: i32, rate: &str) -> Result<Quote, Box<dyn Error>> {
+    async fn get_quote(&self, duration: u16, rate: &str) -> Result<Quote, Box<dyn Error + Send + Sync>> {
         log::info!("Getting quote...");
         match self
             .get(
@@ -287,9 +287,9 @@ impl PayByPhone {
     async fn post_quote(
         &self,
         quote: Quote,
-        duration: i32,
+        duration: u16,
         rate: &str,
-    ) -> Result<ParkingSession, Box<dyn Error>> {
+    ) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
         log::info!("Post quote...");
         match self
             .post(
@@ -338,7 +338,7 @@ impl PayByPhone {
         todo!()
     }
 
-    async fn get_parking_session(&self) -> Result<Vec<ParkingSession>, Box<dyn Error>> {
+    async fn get_parking_session(&self) -> Result<Vec<ParkingSession>, Box<dyn Error + Send + Sync>> {
         match self
             .get(
                 format!(
@@ -363,7 +363,7 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn check(&self) -> Result<ParkingSession, Box<dyn Error>> {
+    pub(crate) async fn check(&self) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
         log::info!("Checking user parking sessions...");
         match self.get_parking_session().await {
             Ok(session) => {
@@ -379,7 +379,7 @@ impl PayByPhone {
         }
     }
 
-    async fn get_rate_option(&self) -> Result<Vec<ParkingOption>, Box<dyn Error>> {
+    async fn get_rate_option(&self) -> Result<Vec<ParkingOption>, Box<dyn Error + Send + Sync>> {
         match self
             .get(
                 format!(
