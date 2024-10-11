@@ -257,23 +257,10 @@ impl PayByPhone {
                         let wished_time =
                             quote.parking_start_time + chrono::Duration::minutes(duration as i64);
                         if wished_time > quote.parking_expiry_time {
-                            let cloned_self = self.clone();
-                            tokio::spawn(async move {
-                                match cloned_self
-                                    .renew(
-                                        duration - max_free_duration,
-                                        quote.parking_expiry_time - chrono::Duration::minutes(1),
-                                    )
-                                    .await
-                                {
-                                    Ok(_) => {
-                                        log::info!("Renewal successful for {}", cloned_self.plate);
-                                    }
-                                    Err(e) => {
-                                        log::error!("Failed to renew: {:?}", e);
-                                    }
-                                }
-                            });
+                            self.renew(
+                                duration - max_free_duration,
+                                quote.parking_expiry_time - chrono::Duration::minutes(1),
+                            )
                         }
                         match self.post_quote(quote, duration, rate.as_str()).await {
                             Ok(session) => Ok(session),
@@ -373,16 +360,20 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn renew(
+    pub(crate) fn renew(
         &self,
         duration: i16,
         expiry_time: DateTime<Utc>,
-    ) -> Result<ParkingSession, Box<dyn Error + Send + Sync>> {
-        tokio::time::sleep_until(self.timestamp_to_instant(expiry_time)).await;
-        if duration <= 0 {
-            return self.check().await;
-        }
-        self.park(duration).await
+    ) {
+        let cloned = self.clone();
+        async move {
+            log::info!("Sleeping until {} for renewal of {}...", expiry_time, cloned.plate);
+            tokio::time::sleep_until(cloned.timestamp_to_instant(expiry_time)).await;
+            if duration <= 0 {
+                return cloned.check().await;
+            }
+            cloned.park(duration).await
+        };
     }
 
     fn timestamp_to_instant(&self, timestamp: DateTime<Utc>) -> Instant {

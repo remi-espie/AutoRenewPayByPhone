@@ -50,7 +50,7 @@ struct AccountName {
 #[derive(Deserialize)]
 struct Parking {
     name: String,
-    duration: u16,
+    duration: i16,
 }
 
 #[tokio::main]
