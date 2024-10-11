@@ -3,6 +3,7 @@ use reqwest::{Client, Method, Response};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use chrono::{DateTime, Utc};
+use crate::types::{ParkingSession, ParkedVehicle, Vehicle};
 
 pub struct PayByPhone {
     plate: String,
@@ -39,83 +40,6 @@ struct Auth {
 #[derive(Deserialize)]
 struct Account {
     id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct RateOption {
-    #[serde(rename = "rateOptionId")]
-    rate_option_id: String,
-    #[serde(rename = "type")]
-    r#type: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Segment {
-    #[serde(rename = "chargeableTimeUnitType")]
-    chargeable_time_unit_type: i32,
-    #[serde(rename = "chargeableTimeUnitsParked")]
-    chargeable_time_units_parked: i32,
-    cost: f64,
-    fees: f64,
-    #[serde(rename = "freeTimeUnitType")]
-    free_time_unit_type: i32,
-    #[serde(rename = "freeTimeUnitsApplied")]
-    free_time_units_applied: i32,
-    #[serde(rename = "parkingEnd")]
-    parking_end: DateTime<Utc>,
-    #[serde(rename = "parkingStart")]
-    parking_start: DateTime<Utc>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TotalCost {
-    amount: f64,
-    currency: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Vehicle {
-    #[serde(rename = "countryCode")]
-    country_code: String,
-    id: i32,
-    jurisdiction: String,
-    #[serde(rename = "licensePlate")]
-    license_plate: String,
-    #[serde(rename = "type")]
-    r#type: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ParkingSession {
-    #[serde(rename = "couponApplied")]
-    coupon_applied: Option<String>,
-    #[serde(rename = "expireTime")]
-    expire_time: String,
-    #[serde(rename = "fpsApplies")]
-    fps_applies: bool,
-    #[serde(rename = "isExtendable")]
-    is_extendable: bool,
-    #[serde(rename = "isRenewable")]
-    is_renewable: bool,
-    #[serde(rename = "isStoppable")]
-    is_stoppable: bool,
-    #[serde(rename = "locationId")]
-    location_id: String,
-    #[serde(rename = "maxStayState")]
-    max_stay_state: String,
-    #[serde(rename = "parkingSessionId")]
-    parking_session_id: String,
-    #[serde(rename = "rateOption")]
-    rate_option: RateOption,
-    #[serde(rename = "renewableAfter")]
-    renewable_after: Option<String>,
-    segments: Vec<Segment>,
-    stall: Option<String>,
-    #[serde(rename = "startTime")]
-    start_time: String,
-    #[serde(rename = "totalCost")]
-    total_cost: TotalCost,
-    vehicle: Vehicle,
 }
 
 const BASE_HEADERS: Header = Header {
@@ -277,13 +201,20 @@ impl PayByPhone {
         }
     }
 
-    pub async fn get_vehicles(&self) -> Result<String, Box<dyn Error>> {
+    pub async fn get_vehicles(&self) -> Result<Vec<Vehicle>, Box<dyn Error>> {
         log::info!("Getting user vehicles...");
         match self.get::<String>("https://consumer.paybyphoneapis.com/identity/profileservice/v1/members/vehicles/paybyphone", None).await {
             Ok(resp) => {
                 match resp.text().await {
                     Ok(json) => {
-                        Ok(json)
+                        match serde_json::from_str::<Vec<Vehicle>>(&json) {
+                            Ok(vehicles) => {
+                                Ok(vehicles)
+                            }
+                            Err(e) => {
+                                Err(Box::new(e))
+                            }
+                        }
                     }
                     Err(e) => Err(Box::new(e))
                 }
@@ -300,12 +231,19 @@ impl PayByPhone {
         todo!()
     }
 
-    async fn get_parking_session(&self) -> Result<String, Box<dyn Error>> {
+    async fn get_parking_session(&self) -> Result<Vec<ParkingSession>, Box<dyn Error>> {
         match self.get(format!("https://consumer.paybyphoneapis.com/parking/accounts/{}/sessions", self.account_id.clone().unwrap()).as_str(), Some(&[("periodType","Current")])).await {
             Ok(resp) => {
                 match resp.text().await {
                     Ok(json) => {
-                        Ok(json)
+                        match serde_json::from_str::<Vec<ParkingSession>>(&json) {
+                            Ok(sessions) => {
+                                Ok(sessions)
+                            }
+                            Err(e) => {
+                                Err(Box::new(e))
+                            }
+                        }
                     }
                     Err(e) => {
                         Err(Box::new(e))
@@ -318,12 +256,18 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn check(&self) -> Result<String, Box<dyn Error>> {
+    pub(crate) async fn check(&self) -> Result<ParkingSession, Box<dyn Error>> {
         log::info!("Checking user parking sessions...");
         match self.get_parking_session().await {
-            Ok(json) => {
-                let session = serde_json::from_str::<Vec<ParkingSession>>(&json).unwrap();
-                Ok(format!("{:?}", session))
+            Ok(session) => {
+                match session.iter().find(|s| s.vehicle.license_plate == self.plate) {
+                    Some(s) => {
+                        Ok(s.clone())
+                    }
+                    None => {
+                        Err(Box::from("No active parking session found".to_string()))
+                    }
+                }
             }
             Err(e) => {
                 Err(e)

@@ -1,5 +1,6 @@
 mod config;
 mod paybyphone;
+mod types;
 
 use std::error::Error;
 use clap::Parser;
@@ -75,7 +76,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             log::info!("Checking...");
             match pay_by_phone.check().await { 
                 Ok(sessions) => {
-                    println!("{}", sessions);
+                    println!("{:?}", sessions);
                 }
                 Err(e) => {
                     log::error!("{:?}", e);
@@ -90,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             log::info!("Getting vehicles...");
             match pay_by_phone.get_vehicles().await {
                 Ok(vehicles) => {
-                    println!("{}", vehicles);
+                    println!("{:?}", vehicles);
                 }
                 Err(e) => {
                     log::error!("{:?}", e);
