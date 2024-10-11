@@ -286,7 +286,7 @@ pub struct GetRateOptions {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GetParkingSession{
+pub struct GetParkingSession {
     #[serde(rename = "periodType")]
     pub(crate) period_type: String,
 }

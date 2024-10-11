@@ -1,7 +1,10 @@
-use crate::types::{Account, Auth, Duration, GetParkingSession, GetQuote, GetRateOptions, ParkingOption, ParkingSession, PaymentMethod, PaymentPayload, PostQuote, Quote, Vehicle};
+use crate::types::{
+    Account, Auth, Duration, GetParkingSession, GetQuote, GetRateOptions, ParkingOption,
+    ParkingSession, PaymentMethod, PaymentPayload, PostQuote, Quote, Vehicle,
+};
 use regex::Regex;
 use reqwest::{Client, Method, Response};
-use serde::{Serialize};
+use serde::Serialize;
 use serde_json::json;
 use std::error::Error;
 
