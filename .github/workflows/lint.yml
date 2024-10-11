@@ -1,0 +1,38 @@
+name: Lint Rust package
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout project
+
+      - uses: dtolnay/rust-toolchain@stable
+        name: Install the Rust toolchain
+
+      - uses: Swatinem/rust-cache@v2
+        name: Use cached dependencies and artifacts
+
+      - uses: arduino/setup-protoc@v3
+        name: Install Protoc
+
+      - name: Build the package
+        run: cargo build --release --all-features --verbose
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Check linting
+        run: cargo clippy -- -D warnings

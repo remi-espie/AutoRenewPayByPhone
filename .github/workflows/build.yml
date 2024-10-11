@@ -1,0 +1,48 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+    lint:
+      name: Lint the Rust packages
+      uses: ./.github/workflows/lint.yml
+
+    build:
+      needs: lint
+      permissions:
+        packages: write
+
+      env:
+        REGISTRY: ghcr.io
+        IMAGE_NAME: ${{ github.repository }}
+
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v4
+        name: Checkout project
+
+      - uses: docker/login-action@v2
+        name: Log in to the container registry
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v4
+        name: Extract metadata (tags, labels) for Docker
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            latest
+
+      - uses: docker/build-push-action@v4
+        name: Build and push the Docker image
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
