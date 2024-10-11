@@ -5,6 +5,8 @@ services:
       - "3000:3000"
     env_file:
       - .env
+    volumes:
+      - ./config.yaml:./config.yaml:ro
 
   frontend:
     image: ghcr.io/remi-espie/autorenewpaybyphone/front:latest
