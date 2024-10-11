@@ -256,10 +256,10 @@ impl PayByPhone {
                             let cloned = self.clone();
                             tokio::spawn(async move {
                                 let expiry_time =
-                                    quote.parking_expiry_time - chrono::Duration::minutes(1);
+                                    quote.parking_expiry_time + chrono::Duration::minutes(1);
                                 let new_duration = (quote.parking_start_time
                                     + chrono::Duration::minutes(duration as i64)
-                                    + chrono::Duration::minutes(1)
+                                    - chrono::Duration::minutes(1)
                                     - quote.parking_expiry_time)
                                     .num_minutes();
                                 log::info!(
