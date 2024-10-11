@@ -1,6 +1,6 @@
 use regex::Regex;
 use reqwest::{Client, Method, Response};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 
 pub struct PayByPhone {
@@ -58,8 +58,8 @@ impl PayByPhone {
         login: String,
         password: String,
         payment_account_id: String,
-    ) -> PayByPhone {
-        PayByPhone {
+    ) -> Self {
+        Self {
             plate,
             lot,
             rate,
@@ -74,6 +74,7 @@ impl PayByPhone {
     }
 
     pub async fn init(&mut self) -> Result<(), Box<dyn Error>> {
+        log::info!("Getting API key...");
         match self
             .client
             .get("https://m2.paybyphone.fr/static/js/main.0aec44c0.chunk.js")
@@ -100,6 +101,7 @@ impl PayByPhone {
                         ("client_id", "paybyphone_webapp"),
                     ];
 
+                    log::info!("Getting user access token...");
                     match self
                         .client
                         .post("https://auth.paybyphoneapis.com/token")
@@ -119,9 +121,9 @@ impl PayByPhone {
                         Ok(resp) => match resp.text().await {
                             Ok(json) => {
                                 self.auth = serde_json::from_str(&json).unwrap();
-
+                                log::info!("Getting user account ID...");
                                 match self
-                                    .get("https://consumer.paybyphoneapis.com/parking/accounts")
+                                    .get::<String>("https://consumer.paybyphoneapis.com/parking/accounts", None)
                                     .await
                                 {
                                     Ok(resp) => match resp.text().await {
@@ -146,15 +148,15 @@ impl PayByPhone {
         }
         Ok(())
     }
-    
-    pub async fn get(&self, url: &str) -> Result<Response, Box<dyn Error>> {
-        self.request(Method::GET, url).await
+
+    pub async fn get<T: Serialize + ?Sized>(&self, url: &str, params: Option<&T>) -> Result<Response, Box<dyn Error>> {
+        self.request(Method::GET, url, params).await
     }
 
-    pub async fn request(&self, method: Method, url: &str) -> Result<Response, Box<dyn Error>> {
-        match self
+    pub async fn request<T: Serialize + ?Sized>(&self, method: Method, url: &str, params: Option<&T>) -> Result<Response, Box<dyn Error>> {
+        let mut request = self
             .client
-            .request(method, url)
+            .request(method.clone(), url)
             .header("User-Agent", BASE_HEADERS.user_agent)
             .header("Accept-Language", BASE_HEADERS.accept_language)
             .header("Accept-Encoding", BASE_HEADERS.accept_encoding)
@@ -172,8 +174,23 @@ impl PayByPhone {
                     " ".parse().unwrap(),
                     self.auth.clone().unwrap().access_token,
                 ]
-                .concat(),
-            )
+                    .concat(),
+            );
+
+        if let Some(params) = params {
+            match method {
+                Method::GET => {
+                    request = request.query(params);
+                }
+                Method::POST => {
+                    request = request.form(params);
+                }
+                _ => {
+                }
+            }
+        }
+
+        match request
             .send()
             .await
         {
@@ -182,15 +199,65 @@ impl PayByPhone {
         }
     }
 
-    pub async fn get_vehicles(&self) -> String {
-        match self.get("https://consumer.paybyphoneapis.com/identity/profileservice/v1/members/vehicles/paybyphone").await { Ok(resp) => {
-            match resp.text().await {
-                Ok(json) => {
-                    json
+    pub async fn get_vehicles(&self) -> Result<String, Box<dyn Error>> {
+        log::info!("Getting user vehicles...");
+        match self.get::<String>("https://consumer.paybyphoneapis.com/identity/profileservice/v1/members/vehicles/paybyphone", None).await {
+            Ok(resp) => {
+                match resp.text().await {
+                    Ok(json) => {
+                        Ok(json)
+                    }
+                    Err(e) => Err(Box::new(e))
                 }
-                Err(e) => e.to_string()
+            }
+            Err(e) => Err(e)
+        }
+    }
+
+    pub(crate) async fn park(&self) {
+        todo!()
+    }
+
+    pub(crate) async fn renew(&self) {
+        todo!()
+    }
+
+    async fn get_parking_session(&self) -> Result<String, Box<dyn Error>> {
+        match self.get(format!("https://consumer.paybyphoneapis.com/parking/accounts/{}/sessions", self.account_id.clone().unwrap()).as_str(), Some(&[("periodType","Current")])).await { 
+            Ok(resp) => {
+                match resp.text().await {
+                    Ok(json) => {
+                        Ok(json)
+                    }
+                    Err(e) => {
+                        Err(Box::new(e))
+                    }
+                }
+            }
+            Err(e) => {
+                Err(e)
             }
         }
-            Err(e) => e.to_string()}
+    }
+    
+    pub(crate) async fn check(&self) -> Result<String, Box<dyn Error>> {
+        log::info!("Checking user parking sessions...");
+        match self.get_parking_session().await {
+            Ok(json) => {
+                let session = serde_json::from_str::<serde_json::Value>(&json).unwrap();
+                let mut sessions = String::new();
+                for s in session.as_array().unwrap() {
+                    sessions.push_str(&format!("{}\n", s));
+                }
+                Ok(sessions)
+            }
+            Err(e) => {
+                Err(e)
+            }
+        }
+    }
+
+    pub(crate) async fn cancel(&self) {
+        todo!()
     }
 }
