@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, FixedOffset, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -153,4 +153,154 @@ pub struct Profile {
     icon: Option<String>,
     #[serde(rename = "userMessages")]
     user_messages: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ParkingOption {
+    name: String,
+    r#type: String,
+    #[serde(rename = "rateOptionId")]
+    pub(crate) rate_option_id: String,
+    #[serde(rename = "effectiveMaxStayDuration")]
+    effective_max_stay_duration: Duration,
+    #[serde(rename = "maxStayStatus")]
+    max_stay_status: String,
+    #[serde(rename = "policyType")]
+    policy_type: String,
+    #[serde(rename = "maxStayEndTime")]
+    max_stay_end_time: DateTime<FixedOffset>,
+    #[serde(rename = "acceptedTimeUnits")]
+    accepted_time_units: Vec<String>,
+    #[serde(rename = "restrictionPeriods")]
+    restriction_periods: Vec<RestrictionPeriod>,
+    #[serde(rename = "availableTimeUnitsWithRestrictions")]
+    available_time_units_with_restrictions: AvailableTimeUnitsWithRestrictions,
+    #[serde(rename = "timeSteps")]
+    time_steps: Option<String>,
+    #[serde(rename = "isDefault")]
+    is_default: bool,
+    #[serde(rename = "isPreferred")]
+    is_preferred: bool,
+    #[serde(rename = "licensePlate")]
+    license_plate: String,
+    areas: Vec<String>,
+    fps: Option<String>,
+    #[serde(rename = "availablePromotions")]
+    available_promotions: Vec<String>,
+    #[serde(rename = "renewalParking")]
+    renewal_parking: RenewalParking,
+    #[serde(rename = "eligibilityEndDate")]
+    eligibility_end_date: Option<String>,
+    profile: Profile,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Duration {
+    pub(crate) quantity: i32,
+    #[serde(rename = "timeUnit")]
+    pub(crate) time_unit: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RestrictionPeriod {
+    #[serde(rename = "startTime")]
+    start_time: DateTime<FixedOffset>,
+    #[serde(rename = "endTime")]
+    end_time: DateTime<FixedOffset>,
+    #[serde(rename = "maxStay")]
+    max_stay: Duration,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AvailableTimeUnitsWithRestrictions {
+    minutes: TimeUnitRestriction,
+    hours: TimeUnitRestriction,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TimeUnitRestriction {
+    duration: Duration,
+    #[serde(rename = "endTime")]
+    end_time: DateTime<FixedOffset>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RenewalParking {
+    #[serde(rename = "isAllowed")]
+    is_allowed: bool,
+    window: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PostQuote {
+    #[serde(rename = "licensePlate")]
+    pub(crate) license_plate: String,
+    #[serde(rename = "locationId")]
+    pub(crate) location_id: String,
+    pub(crate) stall: Option<String>,
+    #[serde(rename = "rateOptionId")]
+    pub(crate) rate_option_id: String,
+    #[serde(rename = "startTime")]
+    pub(crate) start_time: DateTime<Utc>,
+    #[serde(rename = "quoteId")]
+    pub(crate) quote_id: String,
+    pub(crate) duration: Duration,
+    #[serde(rename = "paymentMethod")]
+    pub(crate) payment_method: PaymentMethod,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PaymentMethod {
+    #[serde(rename = "paymentMethodType")]
+    pub(crate) payment_method_type: String,
+    pub(crate) payload: PaymentPayload,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PaymentPayload {
+    #[serde(rename = "paymentAccountId")]
+    pub(crate) payment_account_id: String,
+    pub(crate) cvv: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GetQuote {
+    #[serde(rename = "licensePlate")]
+    pub(crate) license_plate: String,
+    #[serde(rename = "locationId")]
+    pub(crate) location_id: String,
+    #[serde(rename = "rateOptionId")]
+    pub(crate) rate_option_id: String,
+    #[serde(rename = "durationQuantity")]
+    pub(crate) duration_quantity: i32,
+    #[serde(rename = "timeUnit")]
+    pub(crate) time_unit: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GetRateOptions {
+    #[serde(rename = "locationId")]
+    pub(crate) location_id: String,
+    #[serde(rename = "licensePlate")]
+    pub(crate) license_plate: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GetParkingSession{
+    #[serde(rename = "periodType")]
+    pub(crate) period_type: String,
+}
+
+#[derive(Deserialize, Clone)]
+pub(crate) struct Auth {
+    pub(crate) token_type: String,
+    pub(crate) access_token: String,
+    expires_in: i32,
+    refresh_token: String,
+    scope: String,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct Account {
+    pub(crate) id: String,
 }

@@ -60,7 +60,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut pay_by_phone = paybyphone::PayByPhone::new(
         account.plate.clone(),
         account.lot,
-        account.rate,
         account.pay_by_phone.login.clone(),
         account.pay_by_phone.password.clone(),
         account.pay_by_phone.payment_account_id.clone(),

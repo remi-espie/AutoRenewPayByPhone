@@ -1,14 +1,13 @@
-use crate::types::{ParkingSession, Quote, Vehicle};
+use crate::types::{Account, Auth, Duration, GetParkingSession, GetQuote, GetRateOptions, ParkingOption, ParkingSession, PaymentMethod, PaymentPayload, PostQuote, Quote, Vehicle};
 use regex::Regex;
 use reqwest::{Client, Method, Response};
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 use serde_json::json;
 use std::error::Error;
 
 pub struct PayByPhone {
     plate: String,
     lot: i32,
-    rate: i32,
     login: String,
     password: String,
     payment_account_id: String,
@@ -28,20 +27,6 @@ struct Header {
     connection: &'static str,
 }
 
-#[derive(Deserialize, Clone)]
-struct Auth {
-    token_type: String,
-    access_token: String,
-    expires_in: i32,
-    refresh_token: String,
-    scope: String,
-}
-
-#[derive(Deserialize)]
-struct Account {
-    id: String,
-}
-
 const BASE_HEADERS: Header = Header {
     user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
     accept_language: "en-US,en;q=0.5",
@@ -56,7 +41,6 @@ impl PayByPhone {
     pub fn new(
         plate: String,
         lot: i32,
-        rate: i32,
         login: String,
         password: String,
         payment_account_id: String,
@@ -64,7 +48,6 @@ impl PayByPhone {
         Self {
             plate,
             lot,
-            rate,
             login,
             password,
             payment_account_id,
@@ -203,17 +186,14 @@ impl PayByPhone {
             match method {
                 Method::GET => {
                     request = request.query(params);
-                    // log::debug!("Request: {:?}", request.query(params));
                 }
                 Method::POST => {
-                    request = request.json(params);
-                    log::debug!("JSON: {:?}", json!(params));
-                    // log::debug!("Request: {:?}", request.body(params));
+                    log::debug!("Request: {:?}", json!(params));
+                    request = request.json(&json!(params));
                 }
                 _ => {}
             }
         }
-
         log::debug!("Request: {:?}", request);
 
         match request.send().await {
@@ -251,19 +231,27 @@ impl PayByPhone {
         //         Ok(session)
         //     }
         //     Err(_) => {
-                log::info!("Parking user...");
-                match self.get_quote(duration).await {
-                    Ok(quote) => match self.post_quote(quote, duration).await {
+        log::info!("Parking user...");
+        match self.get_rate_option().await {
+            Ok(options) => {
+                log::info!("Got rate options");
+                let rate = options[0].clone().rate_option_id;
+                match self.get_quote(duration, &rate).await {
+                    Ok(quote) => match self.post_quote(quote, duration, &rate).await {
                         Ok(session) => Ok(session),
                         Err(e) => Err(e),
                     },
                     Err(e) => Err(e),
                 }
-            // }
+            }
+            Err(e) => Err(e),
+        }
+
+        // }
         // }
     }
 
-    async fn get_quote(&self, duration: i32) -> Result<Quote, Box<dyn Error>> {
+    async fn get_quote(&self, duration: i32, rate: &str) -> Result<Quote, Box<dyn Error>> {
         log::info!("Getting quote...");
         match self
             .get(
@@ -272,13 +260,13 @@ impl PayByPhone {
                     self.account_id.clone().unwrap()
                 )
                 .as_str(),
-                Some(&[
-                    ("durationQuantity", duration.to_string()),
-                    ("durationTimeUnit", "Minutes".to_string()),
-                    ("licensePlate", self.plate.clone()),
-                    ("locationId", self.lot.to_string()),
-                    ("rateOptionId", self.rate.to_string()),
-                ]),
+                Some(&GetQuote {
+                    location_id: self.lot.to_string(),
+                    rate_option_id: rate.to_string(),
+                    duration_quantity: duration,
+                    time_unit: "Minutes".to_string(),
+                    license_plate: self.plate.clone(),
+                }),
             )
             .await
         {
@@ -297,6 +285,7 @@ impl PayByPhone {
         &self,
         quote: Quote,
         duration: i32,
+        rate: &str,
     ) -> Result<ParkingSession, Box<dyn Error>> {
         log::info!("Post quote...");
         match self
@@ -306,47 +295,37 @@ impl PayByPhone {
                     self.account_id.clone().unwrap()
                 )
                 .as_str(),
-                Some(&[
-                    ("licensePlate", self.plate.clone().as_str()),
-                    ("locationId", self.lot.to_string().as_str()),
-                    ("rateOptionId", self.rate.to_string().as_str()),
-                    ("paymentAccountId", self.payment_account_id.clone().as_str()),
-                    ("stall", ""),
-                    ("startTime", &quote.parking_start_time.to_rfc3339()),
-                    ("quoteId", quote.quote_id.as_str()),
-                    (
-                        "duration",
-                        serde_json::to_string(
-                            &json!({"timeUnit": "Minutes", "quantity": duration}),
-                        )
-                        .unwrap()
-                        .as_str(),
-                    ),
-                    (
-                        "paymentMethod",
-                        serde_json::to_string(&json!({
-                            "paymentMethodType": "PaymentAccount",
-                            "payload": {
-                                "paymendAccountId": self.payment_account_id,
-                                "cvv": ""
-                            }
-                        }))
-                        .unwrap()
-                        .as_str(),
-                    ),
-                ]),
+                Some(&PostQuote {
+                    license_plate: self.plate.clone(),
+                    location_id: self.lot.to_string(),
+                    stall: None,
+                    rate_option_id: rate.to_string(),
+                    start_time: quote.parking_start_time,
+                    quote_id: quote.quote_id,
+                    duration: Duration {
+                        quantity: duration,
+                        time_unit: "Minutes".to_string(),
+                    },
+                    payment_method: PaymentMethod {
+                        payment_method_type: "PaymentAccount".to_string(),
+                        payload: PaymentPayload {
+                            payment_account_id: self.payment_account_id.clone(),
+                            cvv: None,
+                        },
+                    },
+                }),
             )
             .await
         {
-            Ok(resp) => match resp.text().await {
-                Ok(json) => {
-                    log::info!("Posted quote");
-                    match serde_json::from_str::<ParkingSession>(&json) {
+            Ok(resp) => match resp.status() {
+                reqwest::StatusCode::ACCEPTED => {
+                    log::info!("Parking successful");
+                    match self.check().await {
                         Ok(session) => Ok(session),
-                        Err(e) => Err(Box::new(e)),
+                        Err(e) => Err(e),
                     }
                 }
-                Err(e) => Err(Box::new(e)),
+                _ => Err(format!("Failed to park: {:?}", resp.text().await).into()),
             },
             Err(e) => Err(e),
         }
@@ -364,7 +343,9 @@ impl PayByPhone {
                     self.account_id.clone().unwrap()
                 )
                 .as_str(),
-                Some(&[("periodType", "Current")]),
+                Some(&GetParkingSession {
+                    period_type: "Current".to_string(),
+                }),
             )
             .await
         {
@@ -391,6 +372,32 @@ impl PayByPhone {
                     None => Err(Box::from("No active parking session found".to_string())),
                 }
             }
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn get_rate_option(&self) -> Result<Vec<ParkingOption>, Box<dyn Error>> {
+        match self
+            .get(
+                format!(
+                    "https://consumer.paybyphoneapis.com/parking/locations/{}/rateOptions",
+                    self.lot
+                )
+                .as_str(),
+                Some(&GetRateOptions {
+                    location_id: self.lot.to_string(),
+                    license_plate: self.plate.clone(),
+                }),
+            )
+            .await
+        {
+            Ok(resp) => match resp.text().await {
+                Ok(json) => match serde_json::from_str::<Vec<ParkingOption>>(&json) {
+                    Ok(options) => Ok(options),
+                    Err(e) => Err(Box::new(e)),
+                },
+                Err(e) => Err(Box::new(e)),
+            },
             Err(e) => Err(e),
         }
     }
