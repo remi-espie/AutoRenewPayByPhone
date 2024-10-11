@@ -31,11 +31,17 @@ impl From<String> for Action {
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0", author = "Rémi Espié", about, long_about = None)]
 struct Args {
+    /// Action to perform
     #[arg(short, long)]
     action: Action,
 
+    /// Account name from config.yaml
     #[arg(short = 'x', long)]
     account: String,
+    
+    /// Duration in minutes
+    #[arg(short, long)]
+    duration: Option<i32>,
 }
 
 #[tokio::main]
@@ -66,7 +72,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args.action {
         Action::Park => {
             log::info!("Parking...");
-            println!("{:?}", pay_by_phone.park().await);
+            match args.duration {
+                Some(duration) => {
+                    println!("{:?}", pay_by_phone.park(duration).await);
+                }
+                None => {
+                    panic!("Duration is required for park action");
+                }
+            }
         }
         Action::Renew => {
             log::info!("Renewing...");

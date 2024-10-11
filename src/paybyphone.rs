@@ -223,7 +223,7 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn park(&self) {
+    pub(crate) async fn park(&self, duration: i32) {
         todo!()
     }
 
