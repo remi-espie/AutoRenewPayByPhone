@@ -45,6 +45,8 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::init();
+    
     let args = Args::parse();
 
     log::info!("Reading user config...");
@@ -69,6 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         Err(e) => {
             log::error!("{:?}", e);
+            panic!("Failed to initialize PayByPhone");
         }
     }
 

@@ -91,3 +91,66 @@ pub struct Vehicle {
     #[serde(rename = "type")]
     r#type: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Quote {
+    #[serde(rename = "locationId")]
+    location_id: String,
+    pub(crate) stall: Option<String>,
+    #[serde(rename = "quoteDate")]
+    quote_date: DateTime<Utc>,
+    #[serde(rename = "totalCost")]
+    total_cost: Cost,
+    #[serde(rename = "parkingAccountId")]
+    parking_account_id: String,
+    #[serde(rename = "parkingStartTime")]
+    pub(crate) parking_start_time: DateTime<Utc>,
+    #[serde(rename = "parkingExpiryTime")]
+    parking_expiry_time: DateTime<Utc>,
+    #[serde(rename = "parkingDurationAdjustment")]
+    parking_duration_adjustment: String,
+    #[serde(rename = "licensePlate")]
+    license_plate: String,
+    #[serde(rename = "quoteItems")]
+    pub(crate) quote_items: Vec<QuoteItem>,
+    #[serde(rename = "quoteId")]
+    pub(crate) quote_id: String,
+    #[serde(rename = "promotionApplied")]
+    promotion_applied: Option<String>,
+    profile: Profile,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Cost {
+    amount: f64,
+    currency: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct QuoteItem {
+    #[serde(rename = "quoteItemType")]
+    quote_item_type: String,
+    name: String,
+    #[serde(rename = "costAmount")]
+    cost_amount: Cost,
+    #[serde(rename = "subQuoteItems")]
+    sub_quote_items: Option<Vec<SubQuoteItem>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SubQuoteItem {
+    #[serde(rename = "quoteItemType")]
+    quote_item_type: String,
+    name: String,
+    #[serde(rename = "costAmount")]
+    cost_amount: Cost,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Profile {
+    #[serde(rename = "profileName")]
+    profile_name: String,
+    icon: Option<String>,
+    #[serde(rename = "userMessages")]
+    user_messages: Option<String>,
+}

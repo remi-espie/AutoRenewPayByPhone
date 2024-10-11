@@ -1,8 +1,8 @@
-use crate::types::{ParkedVehicle, ParkingSession, Vehicle};
-use chrono::{DateTime, Utc};
+use crate::types::{ParkingSession, Quote, Vehicle};
 use regex::Regex;
 use reqwest::{Client, Method, Response};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::error::Error;
 
 pub struct PayByPhone {
@@ -154,12 +154,20 @@ impl PayByPhone {
         Ok(())
     }
 
-    pub async fn get<T: Serialize + ?Sized>(
+    async fn get<T: Serialize + ?Sized>(
         &self,
         url: &str,
         params: Option<&T>,
     ) -> Result<Response, Box<dyn Error>> {
         self.request(Method::GET, url, params).await
+    }
+
+    async fn post<T: Serialize + ?Sized>(
+        &self,
+        url: &str,
+        params: Option<&T>,
+    ) -> Result<Response, Box<dyn Error>> {
+        self.request(Method::POST, url, params).await
     }
 
     pub async fn request<T: Serialize + ?Sized>(
@@ -195,13 +203,18 @@ impl PayByPhone {
             match method {
                 Method::GET => {
                     request = request.query(params);
+                    // log::debug!("Request: {:?}", request.query(params));
                 }
                 Method::POST => {
-                    request = request.form(params);
+                    request = request.json(params);
+                    log::debug!("JSON: {:?}", json!(params));
+                    // log::debug!("Request: {:?}", request.body(params));
                 }
                 _ => {}
             }
         }
+
+        log::debug!("Request: {:?}", request);
 
         match request.send().await {
             Ok(resp) => Ok(resp),
@@ -231,8 +244,112 @@ impl PayByPhone {
         }
     }
 
-    pub(crate) async fn park(&self, duration: i32) {
-        todo!()
+    pub(crate) async fn park(&self, duration: i32) -> Result<ParkingSession, Box<dyn Error>> {
+        // match self.check().await {
+        //     Ok(session) => {
+        //         log::info!("User already parked");
+        //         Ok(session)
+        //     }
+        //     Err(_) => {
+                log::info!("Parking user...");
+                match self.get_quote(duration).await {
+                    Ok(quote) => match self.post_quote(quote, duration).await {
+                        Ok(session) => Ok(session),
+                        Err(e) => Err(e),
+                    },
+                    Err(e) => Err(e),
+                }
+            // }
+        // }
+    }
+
+    async fn get_quote(&self, duration: i32) -> Result<Quote, Box<dyn Error>> {
+        log::info!("Getting quote...");
+        match self
+            .get(
+                format!(
+                    "https://consumer.paybyphoneapis.com/parking/accounts/{}/quote",
+                    self.account_id.clone().unwrap()
+                )
+                .as_str(),
+                Some(&[
+                    ("durationQuantity", duration.to_string()),
+                    ("durationTimeUnit", "Minutes".to_string()),
+                    ("licensePlate", self.plate.clone()),
+                    ("locationId", self.lot.to_string()),
+                    ("rateOptionId", self.rate.to_string()),
+                ]),
+            )
+            .await
+        {
+            Ok(resp) => match resp.text().await {
+                Ok(json) => match serde_json::from_str::<Quote>(&json) {
+                    Ok(quote) => Ok(quote),
+                    Err(e) => Err(Box::new(e)),
+                },
+                Err(e) => Err(Box::new(e)),
+            },
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn post_quote(
+        &self,
+        quote: Quote,
+        duration: i32,
+    ) -> Result<ParkingSession, Box<dyn Error>> {
+        log::info!("Post quote...");
+        match self
+            .post(
+                format!(
+                    "https://consumer.paybyphoneapis.com/parking/accounts/{}/sessions/",
+                    self.account_id.clone().unwrap()
+                )
+                .as_str(),
+                Some(&[
+                    ("licensePlate", self.plate.clone().as_str()),
+                    ("locationId", self.lot.to_string().as_str()),
+                    ("rateOptionId", self.rate.to_string().as_str()),
+                    ("paymentAccountId", self.payment_account_id.clone().as_str()),
+                    ("stall", ""),
+                    ("startTime", &quote.parking_start_time.to_rfc3339()),
+                    ("quoteId", quote.quote_id.as_str()),
+                    (
+                        "duration",
+                        serde_json::to_string(
+                            &json!({"timeUnit": "Minutes", "quantity": duration}),
+                        )
+                        .unwrap()
+                        .as_str(),
+                    ),
+                    (
+                        "paymentMethod",
+                        serde_json::to_string(&json!({
+                            "paymentMethodType": "PaymentAccount",
+                            "payload": {
+                                "paymendAccountId": self.payment_account_id,
+                                "cvv": ""
+                            }
+                        }))
+                        .unwrap()
+                        .as_str(),
+                    ),
+                ]),
+            )
+            .await
+        {
+            Ok(resp) => match resp.text().await {
+                Ok(json) => {
+                    log::info!("Posted quote");
+                    match serde_json::from_str::<ParkingSession>(&json) {
+                        Ok(session) => Ok(session),
+                        Err(e) => Err(Box::new(e)),
+                    }
+                }
+                Err(e) => Err(Box::new(e)),
+            },
+            Err(e) => Err(e),
+        }
     }
 
     pub(crate) async fn renew(&self) {
