@@ -291,7 +291,7 @@ pub struct GetParkingSession {
     pub(crate) period_type: String,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct Auth {
     pub(crate) token_type: String,
     pub(crate) access_token: String,
