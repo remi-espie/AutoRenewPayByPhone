@@ -2,8 +2,7 @@ accounts:
   - name: "test"
     plate: "AA123BB"
     lot: 1
-    rate: 1
     pay_by_phone:
       login: "+33612345678"
       password: "password"
-      payment_account_id: ""
+      payment_account_id: "" # can be empty if you park on a free lot
