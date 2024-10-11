@@ -4,6 +4,7 @@ mod local_storage;
 mod routes;
 mod types;
 
+use std::env::var;
 use crate::routes::Route;
 use crate::types::AppContext;
 use dioxus::prelude::*;
@@ -21,7 +22,7 @@ fn main() {
 fn app() -> Element {
     use_context_provider(|| {
         Signal::new(AppContext {
-            api_url: dotenvy::var("API_URL").unwrap_or("http://localhost:3000".to_string()),
+            api_url: var("API_URL").unwrap_or("https://api.autopbf.espie.dev".to_string()),
         })
     });
 
