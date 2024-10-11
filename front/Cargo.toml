@@ -12,7 +12,6 @@ chrono = { version = "0.4.38", features = ["serde"] }
 chrono-tz = "0.10.0"
 dioxus = { version = "0.5", features = ["web", "router"] }
 dioxus-logger = "0.5.1"
-dotenvy = "0.15.7"
 futures = "0.3.31"
 gloo-storage = "0.3.0"
 reqwest = { version = "0.12.8", features = ["json"] }
