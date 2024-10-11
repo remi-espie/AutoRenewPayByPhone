@@ -4,7 +4,6 @@ WORKDIR /usr/src/app
 
 COPY src ./src
 COPY ./Cargo.toml .
-COPY ./Cargo.lock .
 
 RUN cargo install dioxus-cli
 
