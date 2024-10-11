@@ -24,7 +24,7 @@ fn main() {
     dioxus_logger::init(Level::INFO).expect("failed to init logger");
     dotenv().ok();
     info!("starting app");
-    launch(app);
+    launch_web(app);
 }
 
 fn app() -> Element {
