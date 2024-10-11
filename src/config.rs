@@ -2,24 +2,24 @@ use serde::{Serialize, Deserialize};
 use std::fs;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct Accounts {
-    accounts: Vec<Config>,
+pub(crate)  struct Accounts {
+    pub(crate) accounts: Vec<Config>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Config {
-    name: String,
-    plate: String,
-    lot: i32,
-    rate: i32,
-    pay_by_phone: PayByPhone,
+    pub(crate) name: String,
+    pub(crate) plate: String,
+    pub(crate) lot: i32,
+    pub(crate) rate: i32,
+    pub(crate) pay_by_phone: PayByPhone,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct PayByPhone {
-    login: String,
-    password: String,
-    payment_account_id: String,
+    pub(crate) login: String,
+    pub(crate) password: String,
+    pub(crate) payment_account_id: String,
 }
 
 pub(crate) fn read(file_path: &str) -> Result<Accounts, Box<dyn std::error::Error>> {
