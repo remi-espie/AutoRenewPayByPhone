@@ -276,7 +276,7 @@ impl PayByPhone {
                                 let _ = cloned.park(new_duration as i16).await;
                             });
                         }
-                        match self.post_quote(quote, 15, rate.as_str()).await {
+                        match self.post_quote(quote.clone(), 15, rate.as_str()).await {
                             Ok(_) => Ok(quote),
                             Err(e) => Err(e),
                         }
