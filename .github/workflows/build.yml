@@ -42,7 +42,15 @@ jobs:
       - uses: docker/build-push-action@v4
         name: Build and push the Docker image
         with:
-          context: .
+          context: ./back
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: ${{ steps.meta.outputs.labels }}/back
+
+      - uses: docker/build-push-action@v4
+        name: Build and push the Docker image
+        with:
+          context: ./front
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}/front
