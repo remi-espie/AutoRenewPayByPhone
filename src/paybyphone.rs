@@ -236,20 +236,20 @@ impl PayByPhone {
         //     }
         //     Err(_) => {
         log::info!("Parking user...");
-        // match self.get_rate_option().await {
-        //     Ok(options) => {
-        //         log::info!("Got rate options");
-        //         let rate = options[0].clone().rate_option_id;
-                match self.get_quote(duration, "815042486").await {
-                    Ok(quote) => match self.post_quote(quote, duration,"815042486").await {
+        match self.get_rate_option().await {
+            Ok(options) => {
+                log::info!("Got rate options");
+                let rate = options[0].clone().rate_option_id;
+                match self.get_quote(duration, rate.as_str()).await {
+                    Ok(quote) => match self.post_quote(quote, duration, rate.as_str()).await {
                         Ok(session) => Ok(session),
                         Err(e) => Err(e),
                     },
                     Err(e) => Err(e),
                 }
-            // }
-            // Err(e) => Err(e),
-        // }
+            }
+            Err(e) => Err(e),
+        }
         // }
         // }
     }
@@ -267,7 +267,7 @@ impl PayByPhone {
                     location_id: self.lot.to_string(),
                     rate_option_id: rate.to_string(),
                     duration_quantity: duration,
-                    time_unit: "Minutes".to_string(),
+                    duration_time_unit: "Minutes".to_string(),
                     license_plate: self.plate.clone(),
                 }),
             )
@@ -378,8 +378,22 @@ impl PayByPhone {
             Err(e) => Err(e),
         }
     }
+    
+    pub(crate) async fn quote(&self, duration: u16) -> Result<Quote, Box<dyn Error + Send + Sync>> {
+        match self.get_rate_option().await {
+            Ok(options) => {
+                let rate = options[0].clone().rate_option_id;
+                match self.get_quote(duration, rate.as_str()).await {
+                    Ok(quote) => Ok(quote),
+                    Err(e) => Err(e),
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
 
     async fn get_rate_option(&self) -> Result<Vec<ParkingOption>, Box<dyn Error + Send + Sync>> {
+        log::info!("Getting rate option...");
         match self
             .get(
                 format!(
@@ -388,8 +402,8 @@ impl PayByPhone {
                 )
                 .as_str(),
                 Some(&GetRateOptions {
-                    location_id: self.lot.to_string(),
                     license_plate: self.plate.clone(),
+                    parking_account_id: self.account_id.clone().unwrap(),
                 }),
             )
             .await

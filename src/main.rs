@@ -67,6 +67,7 @@ async fn main() {
     let app = Router::new()
         .route("/healthz", get(()))
         .route("/accounts", get(get_accounts))
+        .route("/quote", get(get_quote))
         .route("/park", post(park))
         .route("/check", get(get_sessions))
         .route("/vehicles", get(get_vehicles))
@@ -148,6 +149,29 @@ async fn get_vehicles(
             log::info!("Getting vehicles...");
             match pay_by_phone.get_vehicles().await {
                 Ok(vehicles) => (StatusCode::OK, Json(vehicles)).into_response(),
+                Err(e) => {
+                    log::error!("{:?}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())).into_response()
+                }
+            }
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(format!("Failed to initialize PayByPhone: {}", e)),
+        )
+            .into_response(),
+    }
+}
+
+async fn get_quote(
+    State(config): State<Arc<Accounts>>,
+    Query(parking): Query<Parking>,
+) -> impl IntoResponse {
+    match initalize_pay_by_phone(config, parking.name).await {
+        Ok(pay_by_phone) => {
+            log::info!("Getting quote...");
+            match pay_by_phone.quote(parking.duration).await {
+                Ok(quote) => (StatusCode::OK, Json(quote)).into_response(),
                 Err(e) => {
                     log::error!("{:?}", e);
                     (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())).into_response()
