@@ -9,7 +9,6 @@ use reqwest::{Client, Method, Response};
 use serde::Serialize;
 use serde_json::json;
 use std::error::Error;
-use tokio::time::Instant;
 
 #[derive(Debug, Clone)]
 pub struct PayByPhone {
@@ -86,62 +85,15 @@ impl PayByPhone {
                             .to_string(),
                     );
 
-                    let params = [
-                        ("grant_type", "password"),
-                        ("username", &self.login),
-                        ("password", &self.password),
-                        ("client_id", "paybyphone_webapp"),
-                    ];
-
-                    log::info!("Getting user access token...");
-                    match self
-                        .client
-                        .post("https://auth.paybyphoneapis.com/token")
-                        .header("User-Agent", BASE_HEADERS.user_agent)
-                        .header("Accept-Language", BASE_HEADERS.accept_language)
-                        .header("Accept-Encoding", BASE_HEADERS.accept_encoding)
-                        .header("Referer", BASE_HEADERS.referer)
-                        .header("Origin", BASE_HEADERS.origin)
-                        .header("DNT", BASE_HEADERS.dnt)
-                        .header("Connection", BASE_HEADERS.connection)
-                        .header("Accept", "application/json, text/plain, */*")
-                        .header("X-Pbp-ClientType", "WebApp")
-                        .form(&params)
-                        .send()
-                        .await
-                    {
-                        Ok(resp) => match resp.text().await {
-                            Ok(json) => {
-                                self.auth = serde_json::from_str(&json).unwrap();
-                                log::info!("Getting user account ID...");
-                                match self
-                                    .get::<String>(
-                                        "https://consumer.paybyphoneapis.com/parking/accounts",
-                                        None,
-                                    )
-                                    .await
-                                {
-                                    Ok(resp) => match resp.text().await {
-                                        Ok(json) => {
-                                            let accounts: Vec<Account> =
-                                                serde_json::from_str(&json).unwrap();
-                                            self.account_id = Some(accounts[0].id.clone());
-                                        }
-                                        Err(e) => return Err(Box::new(e)),
-                                    },
-                                    Err(e) => return Err(e),
-                                }
-                            }
-                            Err(e) => return Err(Box::new(e)),
-                        },
-                        Err(e) => return Err(Box::new(e)),
+                    match self.get_user_access_token().await {
+                        Ok(_) => Ok(()),
+                        Err(e) => Err(e),
                     }
                 }
-                Err(e) => return Err(Box::new(e)),
+                Err(e) => Err(Box::new(e)),
             },
-            Err(e) => return Err(Box::new(e)),
+            Err(e) => Err(Box::new(e)),
         }
-        Ok(())
     }
 
     async fn get<T: Serialize + ?Sized>(
@@ -253,7 +205,7 @@ impl PayByPhone {
                         if quote.parking_start_time + chrono::Duration::minutes(duration as i64)
                             > quote.parking_expiry_time
                         {
-                            let cloned = self.clone();
+                            let mut cloned = self.clone();
                             tokio::spawn(async move {
                                 let expiry_time =
                                     quote.parking_expiry_time + chrono::Duration::minutes(1);
@@ -276,7 +228,7 @@ impl PayByPhone {
                                 }
                                 tokio::time::sleep(sleeping_dur)
                                     .await;
-                                let _ = cloned.park(new_duration as i16).await;
+                                let _ = cloned.renew(new_duration as i16).await;
                             });
                         }
                         match self.post_quote(quote.clone(), 15, rate.as_str()).await {
@@ -291,6 +243,78 @@ impl PayByPhone {
         }
         // }
         // }
+    }
+    
+    async fn renew(&mut self, duration: i16) -> Result<(), Box<dyn Error + Send + Sync>> {
+        match self.get_user_access_token().await {
+            Ok(_) => {
+                match self.park(duration).await {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        log::error!("{:?}", e);
+                        Err(e) 
+                    },
+                }
+            }
+            Err(e) => {
+                log::error!("{:?}", e);
+                Err(e)
+            }
+        }
+        
+    }
+    
+    async fn get_user_access_token(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        log::info!("Getting user access token...");
+        let params = [
+            ("grant_type", "password"),
+            ("username", &self.login),
+            ("password", &self.password),
+            ("client_id", "paybyphone_webapp"),
+        ];
+        match self
+            .client
+            .post("https://auth.paybyphoneapis.com/token")
+            .header("User-Agent", BASE_HEADERS.user_agent)
+            .header("Accept-Language", BASE_HEADERS.accept_language)
+            .header("Accept-Encoding", BASE_HEADERS.accept_encoding)
+            .header("Referer", BASE_HEADERS.referer)
+            .header("Origin", BASE_HEADERS.origin)
+            .header("DNT", BASE_HEADERS.dnt)
+            .header("Connection", BASE_HEADERS.connection)
+            .header("Accept", "application/json, text/plain, */*")
+            .header("X-Pbp-ClientType", "WebApp")
+            .form(&params)
+            .send()
+            .await
+        {
+            Ok(resp) => match resp.text().await {
+                Ok(json) => {
+                    self.auth = serde_json::from_str(&json).unwrap();
+                    log::info!("Getting user account ID...");
+                    match self
+                        .get::<String>(
+                            "https://consumer.paybyphoneapis.com/parking/accounts",
+                            None,
+                        )
+                        .await
+                    {
+                        Ok(resp) => match resp.text().await {
+                            Ok(json) => {
+                                let accounts: Vec<Account> =
+                                    serde_json::from_str(&json).unwrap();
+                                self.account_id = Some(accounts[0].id.clone());
+                                Ok(())
+                            }
+                            Err(e) => Err(Box::new(e)),
+                        },
+                        Err(e) => Err(e),
+                    }
+                }
+                Err(e) => Err(Box::new(e)),
+            },
+            Err(e) => Err(Box::new(e)),
+        }
     }
 
     async fn get_quote(
