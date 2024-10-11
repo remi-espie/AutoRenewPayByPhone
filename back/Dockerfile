@@ -9,7 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 RUN cargo build --release
 
-FROM scratch AS production
+FROM debian:bookworm-slim AS production
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates gcc libssl-dev
 
 COPY --from=builder /usr/src/app/target/release/back /AutoRenewPayByPhone
 
