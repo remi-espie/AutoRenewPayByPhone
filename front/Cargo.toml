@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 async-recursion = "1.1.1"
 chrono = { version = "0.4.38", features = ["serde"] }
+chrono-tz = "0.10.0"
 dioxus = { version = "0.5", features = ["web", "router"] }
 dioxus-logger = "0.5.1"
 dotenvy = "0.15.7"

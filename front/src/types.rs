@@ -102,7 +102,7 @@ pub(crate) struct ParkingSession {
     #[serde(rename = "couponApplied")]
     coupon_applied: Option<String>,
     #[serde(rename = "expireTime")]
-    expire_time: String,
+    pub(crate) expire_time: String,
     #[serde(rename = "fpsApplies")]
     fps_applies: bool,
     #[serde(rename = "isExtendable")]
@@ -124,7 +124,7 @@ pub(crate) struct ParkingSession {
     segments: Vec<Segment>,
     stall: Option<String>,
     #[serde(rename = "startTime")]
-    start_time: String,
+    pub(crate) start_time: String,
     #[serde(rename = "totalCost")]
     total_cost: TotalCost,
     pub(crate) vehicle: ParkedVehicle,
