@@ -10,7 +10,7 @@ RUN cargo install dioxus-cli
 
 RUN rustup target add wasm32-unknown-unknown
 
-RUN dx build --web --release
+RUN dx build --platform web --release
 
 FROM bitnami/nginx AS production
 

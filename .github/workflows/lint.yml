@@ -55,4 +55,4 @@ jobs:
         run: cargo install dioxus-cli
 
       - name: Build front
-        run: cd front && dx build --web --release
+        run: cd front && dx build --platform web --release
