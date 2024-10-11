@@ -1,7 +1,13 @@
-#![allow(non_snake_case)]
+mod login;
+mod types;
+mod home;
 
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, Level};
+use dotenvy::dotenv;
+use crate::types::AppContext;
+use crate::login::Login;
+use crate::home::Home;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {
@@ -14,49 +20,20 @@ enum Route {
 fn main() {
     // Init logger
     dioxus_logger::init(Level::INFO).expect("failed to init logger");
+    dotenv().ok();
     info!("starting app");
-    launch(App);
+    launch(app);
 }
 
-fn App() -> Element {
+fn app() -> Element {
+    use_context_provider(|| {
+        Signal::new(AppContext {
+            bearer: "".to_string(),
+            api_url: dotenvy::var("API_URL").unwrap_or("http://localhost:3000".to_string()),
+        })
+    });
+
     rsx! {
         Router::<Route> {}
-    }
-}
-
-#[derive(Clone, Copy)]
-struct AppContext {
-    bearer: String,
-    client: reqwest::Client,
-}
-
-#[component]
-fn Login() -> Element {
-    let mut context = use_context::<Signal<AppContext>>();
-    let mut loading = use_signal(|| false);
-
-    rsx! {
-        h1 {"Login"}
-        input { r#type: "text", placeholder: "Bearer token", oninput: move |e| context.bearer.set(e.value()), disabled: loading() }
-        button {
-            onclick: move |_| {
-                info!("Bearer token: {}", context.bearer);
-                loading.set(true);
-
-        }, disabled: loading(),
-            "Login"}
-    }
-}
-
-#[component]
-fn Home() -> Element {
-    let mut count = use_signal(|| 0);
-
-    rsx! {
-        div {
-            h1 { "High-Five counter: {count}" }
-            button { onclick: move |_| count += 1, "Up high!" }
-            button { onclick: move |_| count -= 1, "Down low!" }
-        }
     }
 }

@@ -1,9 +1,9 @@
 [application]
 
-# App (Project) Name
+# app (Project) Name
 name = "front"
 
-# Dioxus App Default Platform
+# Dioxus app Default Platform
 # web, desktop, fullstack
 default_platform = "web"
 
@@ -31,7 +31,7 @@ watch_path = ["src", "assets"]
 
 # CSS style file
 
-style = ["/tailwind.css"]
+style = ["/bulma.min.css"]
 
 # Javascript code file
 script = []

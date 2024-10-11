@@ -29,17 +29,6 @@ struct Args {
     /// Bearer token for authentication. Can be set through the BEARER environment variable.
     #[arg(short, long, env)]
     bearer: String,
-    // /// Action to perform
-    // #[arg(short, long)]
-    // action: Action,
-    //
-    // /// Account name from config.yaml
-    // #[arg(short = 'x', long)]
-    // account: String,
-    //
-    // /// Duration in minutes
-    // #[arg(short, long)]
-    // duration: Option<i32>,
 }
 
 #[derive(Deserialize)]
