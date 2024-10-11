@@ -185,10 +185,7 @@ impl PayByPhone {
     }
 
     #[async_recursion]
-    pub(crate) async fn park(
-        &self,
-        duration: i16,
-    ) -> Result<Quote, Box<dyn Error + Send + Sync>> {
+    pub(crate) async fn park(&self, duration: i16) -> Result<Quote, Box<dyn Error + Send + Sync>> {
         // match self.check().await {
         //     Ok(session) => {
         //         log::info!("User already parked");
@@ -226,8 +223,7 @@ impl PayByPhone {
                                 if new_duration <= 0 {
                                     return;
                                 }
-                                tokio::time::sleep(sleeping_dur)
-                                    .await;
+                                tokio::time::sleep(sleeping_dur).await;
                                 let _ = cloned.renew(new_duration as i16).await;
                             });
                         }
@@ -244,26 +240,23 @@ impl PayByPhone {
         // }
         // }
     }
-    
+
     async fn renew(&mut self, duration: i16) -> Result<(), Box<dyn Error + Send + Sync>> {
         match self.get_user_access_token().await {
-            Ok(_) => {
-                match self.park(duration).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        log::error!("{:?}", e);
-                        Err(e) 
-                    },
+            Ok(_) => match self.park(duration).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    log::error!("{:?}", e);
+                    Err(e)
                 }
-            }
+            },
             Err(e) => {
                 log::error!("{:?}", e);
                 Err(e)
             }
         }
-        
     }
-    
+
     async fn get_user_access_token(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
         log::info!("Getting user access token...");
         let params = [
@@ -293,16 +286,12 @@ impl PayByPhone {
                     self.auth = serde_json::from_str(&json).unwrap();
                     log::info!("Getting user account ID...");
                     match self
-                        .get::<String>(
-                            "https://consumer.paybyphoneapis.com/parking/accounts",
-                            None,
-                        )
+                        .get::<String>("https://consumer.paybyphoneapis.com/parking/accounts", None)
                         .await
                     {
                         Ok(resp) => match resp.text().await {
                             Ok(json) => {
-                                let accounts: Vec<Account> =
-                                    serde_json::from_str(&json).unwrap();
+                                let accounts: Vec<Account> = serde_json::from_str(&json).unwrap();
                                 self.account_id = Some(accounts[0].id.clone());
                                 Ok(())
                             }

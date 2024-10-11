@@ -1,10 +1,10 @@
 mod local_storage;
 mod types;
 
-use chrono_tz::Europe::Paris;
 use crate::local_storage::use_persistent;
 use crate::types::{Accounts, AppContext, Config, ParkingSession};
-use chrono::{Datelike, NaiveTime, Timelike, DateTime};
+use chrono::{DateTime, Datelike, NaiveTime, Timelike};
+use chrono_tz::Europe::Paris;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info, Level};
 use dotenvy::dotenv;
@@ -140,7 +140,11 @@ fn AccountCard(account: Config) -> Element {
                 let client = reqwest::Client::new();
 
                 match client
-                    .get(format!("{}/check?name={}", context.read().api_url, account.name))
+                    .get(format!(
+                        "{}/check?name={}",
+                        context.read().api_url,
+                        account.name
+                    ))
                     .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
                     .send()
                     .await
@@ -151,7 +155,8 @@ fn AccountCard(account: Config) -> Element {
                                 match DateTime::parse_from_rfc3339(sess.start_time.as_str()) {
                                     Ok(time) => {
                                         let local_time = time.with_timezone(&Paris);
-                                        start_time.set(local_time.format("%H:%M").to_string()); }
+                                        start_time.set(local_time.format("%H:%M").to_string());
+                                    }
                                     Err(e) => {
                                         error!("Failed to parse start time: {}", e);
                                         return;
@@ -160,7 +165,8 @@ fn AccountCard(account: Config) -> Element {
                                 match DateTime::parse_from_rfc3339(sess.expire_time.as_str()) {
                                     Ok(time) => {
                                         let local_time = time.with_timezone(&Paris);
-                                        expiry_time.set(local_time.format("%H:%M").to_string()); }
+                                        expiry_time.set(local_time.format("%H:%M").to_string());
+                                    }
                                     Err(e) => {
                                         error!("Failed to parse end time: {}", e);
                                         return;
