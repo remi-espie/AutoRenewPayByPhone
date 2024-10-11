@@ -1,13 +1,13 @@
 services:
   backend:
-    build: ./back
+    image: ghcr.io/remi-espie/autorenewpaybyphone/back:latest
     ports:
       - "3000:3000"
     env_file:
       - .env
 
   frontend:
-    build: ./front
+    image: ghcr.io/remi-espie/autorenewpaybyphone/front:latest
     ports:
       - "8080:8080"
     env_file:
