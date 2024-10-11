@@ -6,14 +6,13 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
-jobs:
-  common:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: Swatinem/rust-cache@v2
-        name: Use cached dependencies and artifacts
+runs:
+  using: "composite"
+  steps:
+    - uses: Swatinem/rust-cache@v2
+      name: Use cached dependencies and artifacts
 
-      - uses: dtolnay/rust-toolchain@stable
-        name: Install the Rust toolchain
-        with:
-          target: x86_64-unknown-linux-gnu, wasm32-unknown-unknown
+    - uses: dtolnay/rust-toolchain@stable
+      name: Install the Rust toolchain
+      with:
+        target: x86_64-unknown-linux-gnu, wasm32-unknown-unknown
