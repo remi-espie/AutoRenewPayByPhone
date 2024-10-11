@@ -33,9 +33,17 @@ jobs:
 
       - uses: docker/metadata-action@v4
         name: Extract metadata (tags, labels) for Docker
-        id: meta
+        id: meta-back
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/back
+          tags: |
+            latest
+
+      - uses: docker/metadata-action@v4
+        name: Extract metadata (tags, labels) for Docker
+        id: meta-front
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/front
           tags: |
             latest
 
@@ -44,13 +52,13 @@ jobs:
         with:
           context: ./back
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}/back
+          tags: ${{ steps.meta-back.outputs.tags }}
+          labels: ${{ steps.meta-back.outputs.labels }}
 
       - uses: docker/build-push-action@v4
         name: Build and push the Docker image
         with:
           context: ./front
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}/front
+          tags: ${{ steps.meta-front.outputs.tags }}
+          labels: ${{ steps.meta-front.outputs.labels }}
