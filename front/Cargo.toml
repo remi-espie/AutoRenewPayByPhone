@@ -1,6 +1,17 @@
 [package]
 name = "front"
 version = "0.1.0"
+authors = ["remi-espie <remi.espie@etu.umontpellier.fr>"]
+description = "Frontend for AutoPBF using Dioxus"
 edition = "2021"
 
+
 [dependencies]
+async-recursion = "1.1.1"
+chrono = { version = "0.4.38", features = ["serde"] }
+dioxus = { version = "0.5", features = ["web", "router"] }
+dioxus-logger = "0.5.1"
+futures = "0.3.31"
+reqwest = { version = "0.12.8", features = ["json"] }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"

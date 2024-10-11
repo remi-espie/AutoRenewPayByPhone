@@ -2,6 +2,9 @@
 name = "back"
 version = "0.1.0"
 edition = "2021"
+description = "Axum project for AutoPBF"
+authors = ["remi-espie <remi.espie@etu.umontpellier.fr>"]
+readme = "README.md"
 
 [dependencies]
 clap = { version = "4.5.18", features = ["derive", "env"] }
