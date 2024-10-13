@@ -20,7 +20,7 @@ fn main() {
 fn app() -> Element {
     use_context_provider(|| {
         Signal::new(AppContext {
-            api_url: env::var("API_URL").unwrap_or("https://api.autopbf.espie.dev".to_string()),
+            api_url: env::var("API_URL").unwrap_or("https://autopbf.espie.dev/api".to_string()),
         })
     });
 

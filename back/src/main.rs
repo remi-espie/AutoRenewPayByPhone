@@ -52,8 +52,8 @@ async fn main() {
 
     log::info!("Reading user config...");
     let config = Arc::new(config::read("config.yaml").unwrap_or_else(|e| panic!("{:?}", e)));
-
-    let app = Router::new()
+    
+    let nested = Router::new()
         .route("/healthz", get(()))
         .route("/accounts", get(get_accounts))
         .route("/quote", get(get_quote))
@@ -65,7 +65,9 @@ async fn main() {
             auth_middleware(req, next, bearer_token.clone())
         }))
         .route("/", get(root));
-    // .route("/cancel", post(|| async { Json(StatusCode::OK) }))
+
+    let app = Router::new()
+        .nest("/api", nested);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", args.port))
         .await
