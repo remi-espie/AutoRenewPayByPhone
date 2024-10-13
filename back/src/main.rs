@@ -52,7 +52,7 @@ async fn main() {
 
     log::info!("Reading user config...");
     let config = Arc::new(config::read("config.yaml").unwrap_or_else(|e| panic!("{:?}", e)));
-    
+
     let nested = Router::new()
         .route("/healthz", get(()))
         .route("/accounts", get(get_accounts))
@@ -66,8 +66,7 @@ async fn main() {
         }))
         .route("/", get(root));
 
-    let app = Router::new()
-        .nest("/api", nested);
+    let app = Router::new().nest("/api", nested);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", args.port))
         .await
