@@ -4,11 +4,11 @@ mod local_storage;
 mod routes;
 mod types;
 
-use std::env;
 use crate::routes::Route;
 use crate::types::AppContext;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, Level};
+use std::env;
 
 fn main() {
     // Init logger
