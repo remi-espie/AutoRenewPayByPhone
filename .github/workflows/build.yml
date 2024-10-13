@@ -10,7 +10,44 @@ jobs:
       name: Lint the Rust packages
       uses: ./.github/workflows/lint.yml
 
-    build:
+    build-front:
+      needs: lint
+      permissions:
+        packages: write
+
+      env:
+        REGISTRY: ghcr.io
+        IMAGE_NAME: ${{ github.repository }}
+
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v4
+        name: Checkout project
+
+      - uses: docker/login-action@v2
+        name: Log in to the container registry
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v4
+        name: Extract metadata (tags, labels) for Docker
+        id: meta-front
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/front
+          tags: |
+            latest
+
+      - uses: docker/build-push-action@v4
+        name: Build and push the Docker image
+        with:
+          context: ./front
+          push: true
+          tags: ${{ steps.meta-front.outputs.tags }}
+          labels: ${{ steps.meta-front.outputs.labels }}
+
+    build-back:
       needs: lint
       permissions:
         packages: write
@@ -39,14 +76,6 @@ jobs:
           tags: |
             latest
 
-      - uses: docker/metadata-action@v4
-        name: Extract metadata (tags, labels) for Docker
-        id: meta-front
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/front
-          tags: |
-            latest
-
       - uses: docker/build-push-action@v4
         name: Build and push the Docker image
         with:
@@ -54,11 +83,3 @@ jobs:
           push: true
           tags: ${{ steps.meta-back.outputs.tags }}
           labels: ${{ steps.meta-back.outputs.labels }}
-
-      - uses: docker/build-push-action@v4
-        name: Build and push the Docker image
-        with:
-          context: ./front
-          push: true
-          tags: ${{ steps.meta-front.outputs.tags }}
-          labels: ${{ steps.meta-front.outputs.labels }}
