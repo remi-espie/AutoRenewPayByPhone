@@ -63,7 +63,8 @@ async fn main() {
         .with_state(config)
         .layer(from_fn(move |req, next| {
             auth_middleware(req, next, bearer_token.clone())
-        }));
+        }))
+        .route("/", get(root));
     // .route("/cancel", post(|| async { Json(StatusCode::OK) }))
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", args.port))
@@ -75,6 +76,10 @@ async fn main() {
     })
     .await
     .unwrap();
+}
+
+async fn root() -> &'static str {
+    "Hello, World!"
 }
 
 async fn initalize_pay_by_phone(
