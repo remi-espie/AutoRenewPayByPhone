@@ -49,10 +49,13 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
                                 match DateTime::parse_from_rfc3339(sess.expire_time.as_str()) {
                                     Ok(time) => {
                                         let local_time = time.with_timezone(&Paris);
-                                        if local_time.num_days_from_ce() > chrono::Local::now().num_days_from_ce() {
-                                            expiry_time.set(local_time.format("%d/%m/%Y - %H:%M").to_string());
-                                        }
-                                        else {
+                                        if local_time.num_days_from_ce()
+                                            > chrono::Local::now().num_days_from_ce()
+                                        {
+                                            expiry_time.set(
+                                                local_time.format("%d/%m/%Y - %H:%M").to_string(),
+                                            );
+                                        } else {
                                             expiry_time.set(local_time.format("%H:%M").to_string());
                                         }
                                     }
