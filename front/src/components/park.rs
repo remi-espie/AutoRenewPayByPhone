@@ -1,5 +1,6 @@
 use crate::check_login::check_login;
 use crate::local_storage::use_persistent;
+use crate::routes::Route;
 use crate::types;
 use crate::types::AppContext;
 use chrono::{Datelike, NaiveTime, Timelike};
@@ -20,6 +21,7 @@ pub(crate) fn Park_comp(name: String) -> Element {
     let mut danger_text = use_signal(|| "Invalid time".to_string());
     let mut loading_button = use_signal(|| "".to_string());
     let mut disabled_button = use_signal(|| true);
+    let mut park_code = use_signal(|| 0);
 
     let check_time = move |e: Event<FormData>| {
         duration.set(e.value());
@@ -77,14 +79,17 @@ pub(crate) fn Park_comp(name: String) -> Element {
             Ok(res) => {
                 if !res.status().is_success() {
                     error!("Park failed: {}", res.text().await.unwrap());
+                    park_code.set(500);
                     loading_button.set("".to_string());
                     return;
                 }
                 info!("Park successful");
                 loading_button.set("".to_string());
+                park_code.set(res.status().into());
             }
             Err(e) => {
                 error!("Park failed: {}", e);
+                park_code.set(500);
                 loading_button.set("".to_string());
             }
         }
@@ -104,6 +109,23 @@ pub(crate) fn Park_comp(name: String) -> Element {
                 }
              button { disabled: disabled_button(), class:"button is-primary is-fullwidth {loading_button}", "Park" }
             }
+
+        if park_code() !=0 {
+            if park_code() == 202 {
+                div { class: "notification is-success mt-3",
+                    button { class: "delete", onclick: move |_| park_code.set(0)}
+                    p { class:"is-flex is-align-items-center", "Parking successful! {end_text}! You can now" }
+                        Link {
+                    class: "button is-primary is-fullwidth", to: Route::Home {}, "Go back"}
+                }
+            }
+            else {
+                 div { class: "notification is-danger mt-3",
+                    button { class: "delete", onclick: move |_| park_code.set(0)}
+                    p { class: "is-flex is-align-items-center", "Parking Failed! Please retry later"}
+                    }
+            }
         }
+    }
     }
 }
