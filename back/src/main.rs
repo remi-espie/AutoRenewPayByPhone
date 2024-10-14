@@ -63,8 +63,7 @@ async fn main() {
         .with_state(config)
         .layer(from_fn(move |req, next| {
             auth_middleware(req, next, bearer_token.clone())
-        }))
-        .route("/", get(root));
+        }));
 
     let app = Router::new().nest("/api", nested);
 
@@ -77,10 +76,6 @@ async fn main() {
     })
     .await
     .unwrap();
-}
-
-async fn root() -> &'static str {
-    "Hello, World!"
 }
 
 async fn initalize_pay_by_phone(
