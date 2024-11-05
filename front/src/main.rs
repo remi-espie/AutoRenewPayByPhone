@@ -4,9 +4,9 @@ mod local_storage;
 mod routes;
 mod types;
 
-use clap::Parser;
 use crate::routes::Route;
 use crate::types::AppContext;
+use clap::Parser;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, Level};
 
