@@ -16,7 +16,7 @@ asset_dir = "assets"
 [web.app]
 
 # HTML title tag content
-title = "front"
+title = "Auto Renew PayByPhone"
 
 [web.watcher]
 
@@ -41,6 +41,3 @@ script = []
 # Javascript code file
 # serve: [dev-server] only
 script = []
-
-[vars]
-API_URL = "$API_URL"
