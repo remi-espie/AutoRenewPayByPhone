@@ -4,11 +4,19 @@ mod local_storage;
 mod routes;
 mod types;
 
+use clap::Parser;
 use crate::routes::Route;
 use crate::types::AppContext;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, Level};
-use std::env;
+
+#[derive(Parser, Debug)]
+#[command(version = "0.1.0", author = "Rémi Espié", about, long_about = None)]
+struct Args {
+    /// The API URL to use. Default is https://autopbf.espie.dev/api.
+    #[arg(short, long, default_value = "https://autopbf.espie.dev/api")]
+    api_url: String,
+}
 
 fn main() {
     // Init logger
@@ -18,9 +26,11 @@ fn main() {
 }
 
 fn app() -> Element {
+    let args = Args::parse();
+    info!("using API URL: {}", args.api_url);
     use_context_provider(|| {
         Signal::new(AppContext {
-            api_url: env::var("API_URL").unwrap_or("https://autopbf.espie.dev/api".to_string()),
+            api_url: args.api_url,
         })
     });
 
