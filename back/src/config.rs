@@ -18,7 +18,7 @@ pub(crate) struct Config {
     pub(crate) session: Option<Session>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub(crate) struct Session {
     pub(crate) next_check: DateTime<Utc>,
     pub(crate) duration: i16,
