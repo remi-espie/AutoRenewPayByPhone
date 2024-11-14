@@ -20,6 +20,7 @@ pub(crate) struct Config {
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct Session {
+    #[serde(rename = "nextCheck")]
     pub(crate) next_check: DateTime<Utc>,
     pub(crate) duration: i16,
 }

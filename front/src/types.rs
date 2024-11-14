@@ -152,3 +152,10 @@ impl ParkingSession {
         }
     }
 }
+
+#[derive(Deserialize, Debug, Clone)]
+pub(crate) struct RenewSession {
+    #[serde(rename = "nextCheck")]
+    pub(crate) next_check: String,
+    pub(crate) duration: i16,
+}
