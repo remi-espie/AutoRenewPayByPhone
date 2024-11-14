@@ -212,30 +212,26 @@ async fn park(
     match initalize_pay_by_phone(config.clone(), parking.name.clone()).await {
         Ok(pay_by_phone) => {
             log::info!("Getting vehicles...");
-            match pay_by_phone.park(parking.duration).await {
+            match pay_by_phone.park().await {
                 Ok(quote) => {
-                    match config
+                    if let Some(conf) = config
                         .write()
                         .await
                         .accounts
                         .iter_mut()
                         .find(|a| a.name == parking.name)
                     {
-                        Some(conf) => {
-                            let duration = (quote.parking_start_time
-                                + chrono::Duration::minutes(parking.duration as i64)
-                                - chrono::Duration::minutes(1)
-                                - quote.parking_expiry_time)
-                                .num_minutes() as i16;
-                            let next_check =
-                                quote.parking_expiry_time + chrono::Duration::minutes(1);
+                        let duration = (quote.parking_start_time
+                            + chrono::Duration::minutes(parking.duration as i64)
+                            - chrono::Duration::minutes(1)
+                            - quote.parking_expiry_time)
+                            .num_minutes() as i16;
+                        let next_check = quote.parking_expiry_time + chrono::Duration::minutes(1);
 
-                            conf.session = Some(Session {
-                                next_check,
-                                duration,
-                            });
-                        }
-                        None => (),
+                        conf.session = Some(Session {
+                            next_check,
+                            duration,
+                        });
                     }
                     (StatusCode::ACCEPTED, Json(quote)).into_response()
                 }
@@ -262,32 +258,30 @@ async fn sleep_loop(config: Arc<RwLock<Accounts>>) {
         tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
         for account in config.write().await.accounts.iter_mut() {
             if let Some(session) = &mut account.session {
-                if session.next_check <= chrono::Utc::now() {
-                    if session.duration > 0 {
-                        log::info!("Renewing account {}", account.name);
-                        match initalize_pay_by_phone(config.clone(), account.name.clone()).await {
-                            Ok(pay_by_phone) => match pay_by_phone.park(session.duration).await {
-                                Ok(quote) => {
-                                    let duration = (quote.parking_start_time
-                                        + chrono::Duration::minutes(session.duration as i64)
-                                        - chrono::Duration::minutes(1)
-                                        - quote.parking_expiry_time)
-                                        .num_minutes()
-                                        as i16;
-                                    let next_check =
-                                        quote.parking_expiry_time + chrono::Duration::minutes(1);
+                if session.next_check <= chrono::Utc::now() && session.duration > 0 {
+                    log::info!("Renewing account {}", account.name);
+                    match initalize_pay_by_phone(config.clone(), account.name.clone()).await {
+                        Ok(pay_by_phone) => match pay_by_phone.park().await {
+                            Ok(quote) => {
+                                let duration = (quote.parking_start_time
+                                    + chrono::Duration::minutes(session.duration as i64)
+                                    - chrono::Duration::minutes(1)
+                                    - quote.parking_expiry_time)
+                                    .num_minutes()
+                                    as i16;
+                                let next_check =
+                                    quote.parking_expiry_time + chrono::Duration::minutes(1);
 
-                                    session.next_check = next_check;
-                                    session.duration = duration;
-                                    log::info!("Vehicle parked");
-                                }
-                                Err(e) => {
-                                    log::error!("{:?}", e);
-                                }
-                            },
+                                session.next_check = next_check;
+                                session.duration = duration;
+                                log::info!("Vehicle parked");
+                            }
                             Err(e) => {
                                 log::error!("{:?}", e);
                             }
+                        },
+                        Err(e) => {
+                            log::error!("{:?}", e);
                         }
                     }
                 }
