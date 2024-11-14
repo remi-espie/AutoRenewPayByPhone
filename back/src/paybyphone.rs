@@ -1,10 +1,8 @@
-use crate::config::Session;
 use crate::types::{
     Account, Auth, Duration, GetParkingSession, GetQuote, GetRateOptions, ParkingOption,
     ParkingSession, PaymentMethod, PaymentPayload, PostQuote, Quote, Vehicle,
 };
 use async_recursion::async_recursion;
-use chrono::{DateTime, Utc};
 use regex::Regex;
 use reqwest::{Client, Method, Response};
 use serde::Serialize;
@@ -186,7 +184,7 @@ impl PayByPhone {
     }
 
     #[async_recursion]
-    pub(crate) async fn park(&self, duration: i16) -> Result<Quote, Box<dyn Error + Send + Sync>> {
+    pub(crate) async fn park(&self) -> Result<Quote, Box<dyn Error + Send + Sync>> {
         log::info!("Parking user...");
         match self.get_rate_option().await {
             Ok(parking_options) => {
@@ -201,22 +199,6 @@ impl PayByPhone {
                 }
             }
             Err(e) => Err(e),
-        }
-    }
-
-    async fn renew(&mut self, duration: i16) -> Result<(), Box<dyn Error + Send + Sync>> {
-        match self.get_user_access_token().await {
-            Ok(_) => match self.park(duration).await {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    log::error!("{:?}", e);
-                    Err(e)
-                }
-            },
-            Err(e) => {
-                log::error!("{:?}", e);
-                Err(e)
-            }
         }
     }
 
@@ -348,16 +330,6 @@ impl PayByPhone {
             },
             Err(e) => Err(e),
         }
-    }
-
-    fn timestamp_to_duration(&self, timestamp: DateTime<Utc>) -> std::time::Duration {
-        let now = Utc::now();
-        let duration = if timestamp > now {
-            timestamp - now
-        } else {
-            now - timestamp
-        };
-        tokio::time::Duration::from_secs(duration.num_seconds() as u64)
     }
 
     async fn get_parking_session(
