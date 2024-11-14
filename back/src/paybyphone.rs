@@ -9,6 +9,7 @@ use reqwest::{Client, Method, Response};
 use serde::Serialize;
 use serde_json::json;
 use std::error::Error;
+use crate::config::Session;
 
 #[derive(Debug, Clone)]
 pub struct PayByPhone {
@@ -186,12 +187,6 @@ impl PayByPhone {
 
     #[async_recursion]
     pub(crate) async fn park(&self, duration: i16) -> Result<Quote, Box<dyn Error + Send + Sync>> {
-        // match self.check().await {
-        //     Ok(session) => {
-        //         log::info!("User already parked");
-        //         Ok(session)
-        //     }
-        //     Err(_) => {
         log::info!("Parking user...");
         match self.get_rate_option().await {
             Ok(parking_options) => {
@@ -199,34 +194,6 @@ impl PayByPhone {
                 let rate = parking_options[0].clone().rate_option_id;
                 match self.get_quote(15, rate.as_str()).await {
                     Ok(quote) => {
-                        if quote.parking_start_time + chrono::Duration::minutes(duration as i64)
-                            > quote.parking_expiry_time
-                        {
-                            let mut cloned = self.clone();
-                            tokio::spawn(async move {
-                                let expiry_time =
-                                    quote.parking_expiry_time + chrono::Duration::minutes(1);
-                                let new_duration = (quote.parking_start_time
-                                    + chrono::Duration::minutes(duration as i64)
-                                    - chrono::Duration::minutes(1)
-                                    - quote.parking_expiry_time)
-                                    .num_minutes();
-                                let sleeping_dur = cloned.timestamp_to_duration(expiry_time);
-                                log::info!(
-                                    "It is {}; Sleeping for {:?} until {} for renewal of {} for another {} minutes...",
-                                    Utc::now(),
-                                    sleeping_dur,
-                                    expiry_time,
-                                    cloned.plate,
-                                    new_duration,
-                                );
-                                if new_duration <= 0 {
-                                    return;
-                                }
-                                tokio::time::sleep(sleeping_dur).await;
-                                let _ = cloned.renew(new_duration as i16).await;
-                            });
-                        }
                         match self.post_quote(quote.clone(), 15, rate.as_str()).await {
                             Ok(_) => Ok(quote),
                             Err(e) => Err(e),
@@ -237,8 +204,6 @@ impl PayByPhone {
             }
             Err(e) => Err(e),
         }
-        // }
-        // }
     }
 
     async fn renew(&mut self, duration: i16) -> Result<(), Box<dyn Error + Send + Sync>> {

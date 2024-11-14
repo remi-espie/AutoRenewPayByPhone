@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct Accounts {
@@ -13,6 +14,14 @@ pub(crate) struct Config {
     pub(crate) lot: i32,
     #[serde(skip_serializing)]
     pub(crate) pay_by_phone: PayByPhone,
+    #[serde(skip)]
+    pub(crate) session: Option<Session>
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Session {
+    pub(crate) next_check: DateTime<Utc>,
+    pub(crate) duration: i16,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
