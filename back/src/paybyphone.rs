@@ -2,7 +2,6 @@ use crate::types::{
     Account, Auth, Duration, GetParkingSession, GetQuote, GetRateOptions, ParkingOption,
     ParkingSession, PaymentMethod, PaymentPayload, PostQuote, Quote, Vehicle,
 };
-use async_recursion::async_recursion;
 use regex::Regex;
 use reqwest::{Client, Method, Response};
 use serde::Serialize;
@@ -183,7 +182,6 @@ impl PayByPhone {
         }
     }
 
-    #[async_recursion]
     pub(crate) async fn park(&self) -> Result<Quote, Box<dyn Error + Send + Sync>> {
         log::info!("Parking user...");
         match self.get_rate_option().await {
