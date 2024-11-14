@@ -3,7 +3,7 @@ mod middleware;
 mod paybyphone;
 mod types;
 
-use crate::config::Accounts;
+use crate::config::{Accounts, Session};
 use crate::middleware::auth_middleware;
 use axum::extract::{Query, State};
 use axum::middleware::from_fn;
@@ -18,6 +18,7 @@ use dotenvy::dotenv;
 use serde::Deserialize;
 use std::error::Error;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0", author = "Rémi Espié", about, long_about = None)]
@@ -51,7 +52,7 @@ async fn main() {
     let bearer_token = Arc::new(args.bearer.clone());
 
     log::info!("Reading user config...");
-    let config = Arc::new(config::read("config.yaml").unwrap_or_else(|e| panic!("{:?}", e)));
+    let config = Arc::new(RwLock::new(config::read("config.yaml").unwrap_or_else(|e| panic!("{:?}", e))));
 
     let nested = Router::new()
         .route("/healthz", get(()))
@@ -60,7 +61,7 @@ async fn main() {
         .route("/park", post(park))
         .route("/check", get(get_sessions))
         .route("/vehicles", get(get_vehicles))
-        .with_state(config)
+        .with_state(config.clone())
         .layer(from_fn(move |req, next| {
             auth_middleware(req, next, bearer_token.clone())
         }));
@@ -73,16 +74,17 @@ async fn main() {
     log::info!("Listening on 0.0.0.0:{}", args.port);
     tokio::spawn(async move {
         axum::serve(listener, app).await.unwrap();
-    })
-    .await
-    .unwrap();
+    });
+    tokio::spawn(async move {
+        sleep_loop(config).await;
+    });
 }
 
 async fn initalize_pay_by_phone(
-    config: Arc<Accounts>,
+    config: Arc<RwLock<Accounts>>,
     account_name: String,
 ) -> Result<paybyphone::PayByPhone, Box<dyn Error + Send + Sync>> {
-    match config.accounts.iter().find(|a| a.name == account_name) {
+    match config.read().await.accounts.iter().find(|a| a.name == account_name) {
         Some(account) => {
             let mut pay_by_phone = paybyphone::PayByPhone::new(
                 account.plate.clone(),
@@ -107,7 +109,7 @@ async fn initalize_pay_by_phone(
 }
 
 async fn get_sessions(
-    State(config): State<Arc<Accounts>>,
+    State(config): State<Arc<RwLock<Accounts>>>,
     Query(account_name): Query<AccountName>,
 ) -> impl IntoResponse {
     match initalize_pay_by_phone(config, account_name.name).await {
@@ -130,7 +132,7 @@ async fn get_sessions(
 }
 
 async fn get_vehicles(
-    State(config): State<Arc<Accounts>>,
+    State(config): State<Arc<RwLock<Accounts>>>,
     Query(account_name): Query<AccountName>,
 ) -> impl IntoResponse {
     match initalize_pay_by_phone(config, account_name.name).await {
@@ -153,7 +155,7 @@ async fn get_vehicles(
 }
 
 async fn get_quote(
-    State(config): State<Arc<Accounts>>,
+    State(config): State<Arc<RwLock<Accounts>>>,
     Query(parking): Query<Parking>,
 ) -> impl IntoResponse {
     match initalize_pay_by_phone(config, parking.name).await {
@@ -176,14 +178,33 @@ async fn get_quote(
 }
 
 async fn park(
-    State(config): State<Arc<Accounts>>,
+    State(config): State<Arc<RwLock<Accounts>>>,
     Json(parking): Json<Parking>,
 ) -> impl IntoResponse {
-    match initalize_pay_by_phone(config, parking.name).await {
+    match initalize_pay_by_phone(config.clone(), parking.name.clone()).await {
         Ok(pay_by_phone) => {
             log::info!("Getting vehicles...");
             match pay_by_phone.park(parking.duration).await {
-                Ok(quote) => (StatusCode::ACCEPTED, Json(quote)).into_response(),
+                Ok(quote) => {
+                    match config.write().await.accounts.iter_mut().find(|a| a.name == parking.name) {
+                        Some(conf) => {
+                            let duration = (quote.parking_start_time
+                                + chrono::Duration::minutes(parking.duration as i64)
+                                - chrono::Duration::minutes(1)
+                                - quote.parking_expiry_time)
+                                .num_minutes() as i16;
+                            let next_check = quote.parking_expiry_time
+                                + chrono::Duration::minutes(1);
+
+                            conf.session = Some(Session {
+                                next_check,
+                                duration,
+                            });
+                        },
+                        None => ()
+                    }
+                    (StatusCode::ACCEPTED, Json(quote)).into_response() 
+                },
                 Err(e) => {
                     log::error!("{:?}", e);
                     (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())).into_response()
@@ -198,6 +219,44 @@ async fn park(
     }
 }
 
-async fn get_accounts(State(config): State<Arc<Accounts>>) -> impl IntoResponse {
-    (StatusCode::OK, Json(config)).into_response()
+async fn get_accounts(State(config): State<Arc<RwLock<Accounts>>>) -> impl IntoResponse {
+    (StatusCode::OK, Json(config.read().await.accounts.clone())).into_response()
+}
+
+async fn sleep_loop(config: Arc<RwLock<Accounts>>) {
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+        for account in config.write().await.accounts.iter_mut() {
+            if let Some(session) = &mut account.session {
+                if session.next_check <= chrono::Utc::now() {
+                    if session.duration > 0 {
+                        log::info!("Renewing account {}", account.name);
+                        match initalize_pay_by_phone(config.clone(), account.name.clone()).await {
+                            Ok(pay_by_phone) => match pay_by_phone.park(session.duration).await {
+                                Ok(quote) => {
+                                    let duration = (quote.parking_start_time
+                                        + chrono::Duration::minutes(session.duration as i64)
+                                        - chrono::Duration::minutes(1)
+                                        - quote.parking_expiry_time)
+                                        .num_minutes() as i16;
+                                    let next_check = quote.parking_expiry_time
+                                        + chrono::Duration::minutes(1);
+                                    
+                                    session.next_check = next_check;
+                                    session.duration = duration;
+                                    log::info!("Vehicle parked");
+                                }
+                                Err(e) => {
+                                    log::error!("{:?}", e);
+                                }
+                            },
+                            Err(e) => {
+                                log::error!("{:?}", e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
