@@ -104,7 +104,7 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
                                     }
                                 }
                                 renew_duration.set(sess.duration.to_string());
-                            },
+                            }
                             Err(e) => {
                                 error!("Failed to parse renew session: {}", e);
                             }
