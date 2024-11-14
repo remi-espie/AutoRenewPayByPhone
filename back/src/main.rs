@@ -52,7 +52,9 @@ async fn main() {
     let bearer_token = Arc::new(args.bearer.clone());
 
     log::info!("Reading user config...");
-    let config = Arc::new(RwLock::new(config::read("config.yaml").unwrap_or_else(|e| panic!("{:?}", e))));
+    let config = Arc::new(RwLock::new(
+        config::read("config.yaml").unwrap_or_else(|e| panic!("{:?}", e)),
+    ));
 
     let nested = Router::new()
         .route("/healthz", get(()))
@@ -85,7 +87,13 @@ async fn initalize_pay_by_phone(
     config: Arc<RwLock<Accounts>>,
     account_name: String,
 ) -> Result<paybyphone::PayByPhone, Box<dyn Error + Send + Sync>> {
-    match config.read().await.accounts.iter().find(|a| a.name == account_name) {
+    match config
+        .read()
+        .await
+        .accounts
+        .iter()
+        .find(|a| a.name == account_name)
+    {
         Some(account) => {
             let mut pay_by_phone = paybyphone::PayByPhone::new(
                 account.plate.clone(),
@@ -136,15 +144,18 @@ async fn check_renew(
     State(config): State<Arc<RwLock<Accounts>>>,
     Query(account_name): Query<AccountName>,
 ) -> impl IntoResponse {
-    match config.read().await.accounts.iter().find(|a| a.name == account_name.name) {
-        Some(conf) => {
-            match conf.clone().session { 
-                Some(session) => (StatusCode::OK, Json(session)).into_response(),
-                None => (StatusCode::NOT_FOUND, Json("No session found")).into_response()
-            }
-             
+    match config
+        .read()
+        .await
+        .accounts
+        .iter()
+        .find(|a| a.name == account_name.name)
+    {
+        Some(conf) => match conf.clone().session {
+            Some(session) => (StatusCode::OK, Json(session)).into_response(),
+            None => (StatusCode::NOT_FOUND, Json("No session found")).into_response(),
         },
-        None => (StatusCode::BAD_REQUEST, Json("No session found")).into_response()
+        None => (StatusCode::BAD_REQUEST, Json("No session found")).into_response(),
     }
 }
 
@@ -203,25 +214,31 @@ async fn park(
             log::info!("Getting vehicles...");
             match pay_by_phone.park(parking.duration).await {
                 Ok(quote) => {
-                    match config.write().await.accounts.iter_mut().find(|a| a.name == parking.name) {
+                    match config
+                        .write()
+                        .await
+                        .accounts
+                        .iter_mut()
+                        .find(|a| a.name == parking.name)
+                    {
                         Some(conf) => {
                             let duration = (quote.parking_start_time
                                 + chrono::Duration::minutes(parking.duration as i64)
                                 - chrono::Duration::minutes(1)
                                 - quote.parking_expiry_time)
                                 .num_minutes() as i16;
-                            let next_check = quote.parking_expiry_time
-                                + chrono::Duration::minutes(1);
+                            let next_check =
+                                quote.parking_expiry_time + chrono::Duration::minutes(1);
 
                             conf.session = Some(Session {
                                 next_check,
                                 duration,
                             });
-                        },
-                        None => ()
+                        }
+                        None => (),
                     }
-                    (StatusCode::ACCEPTED, Json(quote)).into_response() 
-                },
+                    (StatusCode::ACCEPTED, Json(quote)).into_response()
+                }
                 Err(e) => {
                     log::error!("{:?}", e);
                     (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())).into_response()
@@ -255,10 +272,11 @@ async fn sleep_loop(config: Arc<RwLock<Accounts>>) {
                                         + chrono::Duration::minutes(session.duration as i64)
                                         - chrono::Duration::minutes(1)
                                         - quote.parking_expiry_time)
-                                        .num_minutes() as i16;
-                                    let next_check = quote.parking_expiry_time
-                                        + chrono::Duration::minutes(1);
-                                    
+                                        .num_minutes()
+                                        as i16;
+                                    let next_check =
+                                        quote.parking_expiry_time + chrono::Duration::minutes(1);
+
                                     session.next_check = next_check;
                                     session.duration = duration;
                                     log::info!("Vehicle parked");

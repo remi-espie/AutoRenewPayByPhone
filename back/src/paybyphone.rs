@@ -1,3 +1,4 @@
+use crate::config::Session;
 use crate::types::{
     Account, Auth, Duration, GetParkingSession, GetQuote, GetRateOptions, ParkingOption,
     ParkingSession, PaymentMethod, PaymentPayload, PostQuote, Quote, Vehicle,
@@ -9,7 +10,6 @@ use reqwest::{Client, Method, Response};
 use serde::Serialize;
 use serde_json::json;
 use std::error::Error;
-use crate::config::Session;
 
 #[derive(Debug, Clone)]
 pub struct PayByPhone {
@@ -193,12 +193,10 @@ impl PayByPhone {
                 log::info!("Got rate options");
                 let rate = parking_options[0].clone().rate_option_id;
                 match self.get_quote(15, rate.as_str()).await {
-                    Ok(quote) => {
-                        match self.post_quote(quote.clone(), 15, rate.as_str()).await {
-                            Ok(_) => Ok(quote),
-                            Err(e) => Err(e),
-                        }
-                    }
+                    Ok(quote) => match self.post_quote(quote.clone(), 15, rate.as_str()).await {
+                        Ok(_) => Ok(quote),
+                        Err(e) => Err(e),
+                    },
                     Err(e) => Err(e),
                 }
             }
