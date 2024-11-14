@@ -60,6 +60,7 @@ async fn main() {
         .route("/quote", get(get_quote))
         .route("/park", post(park))
         .route("/check", get(get_sessions))
+        .route("/check_renew", get(check_renew))
         .route("/vehicles", get(get_vehicles))
         .with_state(config.clone())
         .layer(from_fn(move |req, next| {
@@ -128,6 +129,22 @@ async fn get_sessions(
             Json(format!("Failed to initialize PayByPhone: {}", e)),
         )
             .into_response(),
+    }
+}
+
+async fn check_renew(
+    State(config): State<Arc<RwLock<Accounts>>>,
+    Query(account_name): Query<AccountName>,
+) -> impl IntoResponse {
+    match config.read().await.accounts.iter().find(|a| a.name == account_name.name) {
+        Some(conf) => {
+            match conf.clone().session { 
+                Some(session) => (StatusCode::OK, Json(session)).into_response(),
+                None => (StatusCode::NOT_FOUND, Json("No session found")).into_response()
+            }
+             
+        },
+        None => (StatusCode::BAD_REQUEST, Json("No session found")).into_response()
     }
 }
 
