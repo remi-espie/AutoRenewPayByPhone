@@ -84,7 +84,7 @@ async fn main() {
         let mut next_check = Instant::now();
         loop {
             sleep_until(next_check).await;
-            log::info!("checking renewal at {:?}", chrono::Utc::now());
+            log::debug!("checking renewal at {:?}", chrono::Utc::now());
             next_check += tokio::time::Duration::from_secs(60);
             check_renewal(config.clone()).await;
         }
