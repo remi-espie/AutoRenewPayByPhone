@@ -81,7 +81,9 @@ async fn main() {
     log::info!("Starting renewal loop");
     tokio::spawn(async move {
         sleep_loop(config).await;
-    }).await.unwrap();
+    })
+    .await
+    .unwrap();
 }
 
 async fn initalize_pay_by_phone(
