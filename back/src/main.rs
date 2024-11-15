@@ -19,6 +19,7 @@ use serde::Deserialize;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::time::{sleep_until, Instant};
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0", author = "Rémi Espié", about, long_about = None)]
@@ -80,7 +81,13 @@ async fn main() {
     });
     log::info!("Starting renewal loop");
     tokio::spawn(async move {
-        sleep_loop(config).await;
+        let mut next_check = Instant::now();
+        loop {
+            sleep_until(next_check).await;
+            log::info!("checking renewal at {:?}", chrono::Utc::now());
+            next_check += tokio::time::Duration::from_secs(60);
+            check_renewal(config.clone()).await;
+        }
     })
     .await
     .unwrap();
@@ -256,36 +263,32 @@ async fn get_accounts(State(config): State<Arc<RwLock<Accounts>>>) -> impl IntoR
     (StatusCode::OK, Json(config.read().await.clone())).into_response()
 }
 
-async fn sleep_loop(config: Arc<RwLock<Accounts>>) {
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-        for account in config.write().await.accounts.iter_mut() {
-            if let Some(session) = &mut account.session {
-                if session.next_check <= chrono::Utc::now() && session.duration > 0 {
-                    log::info!("Renewing account {}", account.name);
-                    match initalize_pay_by_phone(config.clone(), account.name.clone()).await {
-                        Ok(pay_by_phone) => match pay_by_phone.park().await {
-                            Ok(quote) => {
-                                let duration = (quote.parking_start_time
-                                    + chrono::Duration::minutes(session.duration as i64)
-                                    - chrono::Duration::minutes(1)
-                                    - quote.parking_expiry_time)
-                                    .num_minutes()
-                                    as i16;
-                                let next_check =
-                                    quote.parking_expiry_time + chrono::Duration::minutes(1);
+async fn check_renewal(config: Arc<RwLock<Accounts>>) {
+    for account in config.write().await.accounts.iter_mut() {
+        if let Some(session) = &mut account.session {
+            if session.next_check <= chrono::Utc::now() && session.duration > 0 {
+                log::info!("Renewing account {}", account.name);
+                match initalize_pay_by_phone(config.clone(), account.name.clone()).await {
+                    Ok(pay_by_phone) => match pay_by_phone.park().await {
+                        Ok(quote) => {
+                            let duration = (quote.parking_start_time
+                                + chrono::Duration::minutes(session.duration as i64)
+                                - chrono::Duration::minutes(1)
+                                - quote.parking_expiry_time)
+                                .num_minutes() as i16;
+                            let next_check =
+                                quote.parking_expiry_time + chrono::Duration::minutes(1);
 
-                                session.next_check = next_check;
-                                session.duration = duration;
-                                log::info!("Vehicle parked");
-                            }
-                            Err(e) => {
-                                log::error!("{:?}", e);
-                            }
-                        },
+                            session.next_check = next_check;
+                            session.duration = duration;
+                            log::info!("Vehicle parked");
+                        }
                         Err(e) => {
                             log::error!("{:?}", e);
                         }
+                    },
+                    Err(e) => {
+                        log::error!("{:?}", e);
                     }
                 }
             }
