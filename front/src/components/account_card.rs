@@ -104,7 +104,11 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
                                     }
                                 }
                                 let renew_time = chrono::Duration::minutes(sess.duration as i64);
-                                renew_duration.set(format!("{:02}:{:02}", renew_time.num_hours(), renew_time.num_minutes() % 60));
+                                renew_duration.set(format!(
+                                    "{:02}:{:02}",
+                                    renew_time.num_hours(),
+                                    renew_time.num_minutes() % 60
+                                ));
                             }
                             Err(e) => {
                                 error!("Failed to parse renew session: {}", e);
