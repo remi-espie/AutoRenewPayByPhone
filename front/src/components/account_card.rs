@@ -103,7 +103,8 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
                                         return;
                                     }
                                 }
-                                renew_duration.set(sess.duration.to_string());
+                                let renew_time = chrono::Duration::minutes(sess.duration as i64);
+                                renew_duration.set(format!("{:02}:{:02}", renew_time.num_hours(), renew_time.num_minutes() % 60));
                             }
                             Err(e) => {
                                 error!("Failed to parse renew session: {}", e);
@@ -150,11 +151,17 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
                                 p { class: "title is-4", "Not parked" }
                             } else {
                                 p { class: "title is-4 is-spaced", "Session" }
-                                p { class: "subtitle", "Start: {start_time}" }
-                                p { class: "subtitle has-text-danger", "End: {expiry_time}" }
-                                p { class: "subtitle", "Next renew: {renew_time}" }
-                                p { class: "subtitle", "For at least: {renew_duration}min" }
-                        }
+                                div { class: "subtitle is-flex",
+                                    div { class: "mx-2",
+                                        p { "Start: {start_time}" }
+                                        p { class: "has-text-danger", "End: {expiry_time}" }
+                                    }
+                                    div { class: "mx-2",
+                                        p { "Next renew: {renew_time}" }
+                                        p { "For at least: {renew_duration}" }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
