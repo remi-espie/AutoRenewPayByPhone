@@ -78,9 +78,10 @@ async fn main() {
     tokio::spawn(async move {
         axum::serve(listener, app).await.unwrap();
     });
+    log::info!("Starting renewal loop");
     tokio::spawn(async move {
         sleep_loop(config).await;
-    });
+    }).await.unwrap();
 }
 
 async fn initalize_pay_by_phone(
@@ -250,7 +251,7 @@ async fn park(
 }
 
 async fn get_accounts(State(config): State<Arc<RwLock<Accounts>>>) -> impl IntoResponse {
-    (StatusCode::OK, Json(config.read().await.accounts.clone())).into_response()
+    (StatusCode::OK, Json(config.read().await.clone())).into_response()
 }
 
 async fn sleep_loop(config: Arc<RwLock<Accounts>>) {
