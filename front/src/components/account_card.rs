@@ -171,7 +171,14 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
                 }
                 footer { class: "card-footer",
                     Link {
-                        class: if loading_session() {"card-footer-item button is-primary is-loading"} else if !session().expire_time.is_empty() {"card-footer-item button is-primary is-static"} else {"card-footer-item button is-primary"},
+                        class: {
+                            if loading_session() {
+                                "card-footer-item button is-primary is-loading"
+                            } else if !session().expire_time.is_empty() {
+                                "card-footer-item button is-primary is-static"
+                            } else {
+                                "card-footer-item button is-primary"
+                            }},
                         to: Route::Park {
                             name: account.name.to_string()
                         },

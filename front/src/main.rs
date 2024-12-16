@@ -22,7 +22,7 @@ fn main() {
     // Init logger
     dioxus_logger::init(Level::INFO).expect("failed to init logger");
     info!("starting app");
-    launch_web(app);
+    launch(app);
 }
 
 fn app() -> Element {
