@@ -17,4 +17,4 @@ RUN dx build --platform web --release
 
 FROM bitnami/nginx AS production
 
-COPY --from=builder /usr/src/app/dist /app
+COPY --from=builder /usr/src/app/target/dx/front/release/web/public /app
