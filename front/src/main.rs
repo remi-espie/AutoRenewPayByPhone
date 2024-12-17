@@ -8,7 +8,7 @@ use crate::routes::Route;
 use crate::types::AppContext;
 use clap::Parser;
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{info};
+use dioxus_logger::tracing::info;
 
 #[derive(Parser, Debug)]
 #[command(version = "0.1.0", author = "Rémi Espié", about, long_about = None)]

@@ -1,6 +1,6 @@
 use crate::components::home::Home;
 use crate::components::login::Login;
-use crate::components::park::{Park};
+use crate::components::park::Park;
 use dioxus::prelude::*;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
