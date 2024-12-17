@@ -16,13 +16,13 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
     let mut renew_duration = use_signal(|| "".to_string());
     let mut start_time = use_signal(|| "".to_string());
     let mut expiry_time = use_signal(|| "".to_string());
+    let context = use_context::<Signal<AppContext>>();
 
     let _ = use_resource(move || {
         let account = acc.clone();
         async move {
             {
                 info!("Checking account: {}", account.name);
-                let context = use_context::<Signal<AppContext>>();
                 let client = reqwest::Client::new();
 
                 match client

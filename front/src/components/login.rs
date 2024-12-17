@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
 
 #[component]
-pub(crate) fn Login_comp() -> Element {
+pub(crate) fn Login() -> Element {
     let mut bearer = use_persistent("bearer", || "".to_string());
     let nav = navigator();
     let context = use_context::<Signal<AppContext>>();
@@ -17,7 +17,7 @@ pub(crate) fn Login_comp() -> Element {
             let client = reqwest::Client::new();
 
             match client
-                .get(format!("{}/healthz", context.read().api_url))
+                .get(format!("{}healthz", context.read().api_url))
                 .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
                 .send()
                 .await
@@ -41,7 +41,7 @@ pub(crate) fn Login_comp() -> Element {
     };
 
     rsx! {
-        div { class: "container small-container", onmounted: move |_| {
+        div { class: "container small-container", onvisible: move |_| {
             if !bearer.get().is_empty() {
                 info!("Bearer token found, checking...");
                 login();

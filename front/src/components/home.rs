@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::check_login::check_login;
 use crate::components::account_card::AccountCard_comp;
 use crate::local_storage::use_persistent;
@@ -10,14 +11,15 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::error;
 
 #[component]
-pub(crate) fn Home_comp() -> Element {
+pub(crate) fn Home() -> Element {
     let bearer = use_persistent("bearer", || "".to_string());
     let mut accounts = use_signal(Vec::<Config>::new);
+    let context = use_context::<Signal<AppContext>>();
+    let api_url = context.read().api_url.clone();
     let _ = use_resource(move || async move {
-        let context = use_context::<Signal<AppContext>>();
         let client = reqwest::Client::new();
         match client
-            .get(format!("{}/accounts", context.read().api_url))
+            .get(format!("{}accounts", context.read().api_url))
             .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
             .send()
             .await
@@ -42,7 +44,7 @@ pub(crate) fn Home_comp() -> Element {
     });
 
     rsx! {
-        div { class: "container is-max-tablet", onmounted: move |_| check_login(),
+        div { class: "container is-max-tablet", onmounted: move |_| check_login(bearer.get(), api_url.clone()),
             h1 { class: "is-size-1 has-text-centered", "Accounts" }
             for account in accounts() {
                 AccountCard_comp { account: account }

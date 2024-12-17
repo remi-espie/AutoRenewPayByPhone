@@ -5,16 +5,14 @@ use dioxus::hooks::use_context;
 use dioxus::prelude::{navigator, Readable, Signal};
 use dioxus_logger::tracing::{error, info};
 
-pub(crate) async fn check_login() {
-    let bearer = use_persistent("bearer", || "".to_string());
-    info!("Bearer token: {}", bearer.get());
+pub(crate) async fn check_login(bearer: String, api_url: String) {
+    info!("Bearer token: {}", bearer);
     let nav = navigator();
-    let context = use_context::<Signal<AppContext>>();
     let client = reqwest::Client::new();
 
     match client
-        .get(format!("{}/healthz", context.read().api_url))
-        .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
+        .get(format!("{}healthz", api_url))
+        .header("authorization", ["Bearer ", bearer.as_str()].concat())
         .send()
         .await
     {

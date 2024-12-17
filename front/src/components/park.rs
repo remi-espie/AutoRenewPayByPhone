@@ -13,9 +13,10 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
 
 #[component]
-pub(crate) fn Park_comp(name: String) -> Element {
+pub(crate) fn Park(name: String) -> Element {
     let bearer = use_persistent("bearer", || "".to_string());
     let context = use_context::<Signal<AppContext>>();
+    let api_url = context.read().api_url.clone();
     let mut duration = use_signal(|| "".to_string());
     let mut end_text = use_signal(|| "".to_string());
     let mut danger_text = use_signal(|| "Invalid time".to_string());
@@ -67,7 +68,7 @@ pub(crate) fn Park_comp(name: String) -> Element {
 
         let client = reqwest::Client::new();
         match client
-            .post(format!("{}/park", context.read().api_url))
+            .post(format!("{}park", context.read().api_url))
             .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
             .json(&types::Parking {
                 name: name.clone(),
@@ -96,7 +97,7 @@ pub(crate) fn Park_comp(name: String) -> Element {
     };
 
     rsx! {
-    div { class: "container is-max-tablet", onmounted: move |_| check_login(),
+    div { class: "container is-max-tablet", onmounted: move |_| check_login(bearer.get(), api_url.clone()),
         h1 { class: "is-size-1 has-text-centered", "Park ",
                 span { class: "has-text-weight-bold has-text-primary", "{name}"}
             }

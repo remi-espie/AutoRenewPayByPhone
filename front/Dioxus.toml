@@ -7,9 +7,6 @@ name = "front"
 # web, desktop, fullstack
 default_platform = "web"
 
-# `build` & `serve` dist path
-out_dir = "dist"
-
 # resource (assets) file folder
 asset_dir = "assets"
 
@@ -19,6 +16,8 @@ asset_dir = "assets"
 title = "Auto Renew PayByPhone"
 
 [web.watcher]
+
+index_on_404 = true
 
 # when watcher trigger, regenerate the `index.html`
 reload_html = true
@@ -31,7 +30,7 @@ watch_path = ["src", "assets"]
 
 # CSS style file
 
-style = ["/bulma.min.css", "/main.css"]
+style = ["./assets/bulma.min.css", "./assets/main.css"]
 
 # Javascript code file
 script = []
@@ -41,3 +40,6 @@ script = []
 # Javascript code file
 # serve: [dev-server] only
 script = []
+
+[[web.proxy]]
+backend = "http://localhost:3000/api/"
