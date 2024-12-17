@@ -8,7 +8,6 @@ use dioxus::hooks::{use_context, use_resource, use_signal};
 use dioxus::prelude::Signal;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::error;
-use std::ops::Deref;
 
 #[component]
 pub(crate) fn Home() -> Element {
