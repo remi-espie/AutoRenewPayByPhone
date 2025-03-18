@@ -104,7 +104,8 @@ The project uses environment variables for configuration. You can set the follow
 - `PORT`: The port on which the backend will listen.
 
 > [!NOTE]
-> `API_URL` is work in progress, as WASM does not support environment variables yet. You can set the URL in the `front/src/main.rs` file.
+> Because the frontend is a WASM app, environment variable are not available.
+> `API_URL` is hardcoded in the frontend code, but is recreated from the environment or the `.env` file at build time, so you can set it in the `.env` file, rebuild and it will be taken into account.
 
 ### 📝 Configuration file
 

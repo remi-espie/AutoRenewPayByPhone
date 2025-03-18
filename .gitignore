@@ -35,3 +35,4 @@ Cargo.lock
 
 config.yaml
 .env
+front/src/env.rs
