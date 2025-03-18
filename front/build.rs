@@ -6,7 +6,7 @@ use std::io::Write;
 fn main() {
     println!("cargo:rerun-if-changed=.env");
     let dest_path = "./src/env.rs";
-    let mut f = File::create(&dest_path).unwrap();
+    let mut f = File::create(dest_path).unwrap();
 
     // use the dotenv crate to get the .env values
     dotenv().ok();
@@ -16,17 +16,17 @@ fn main() {
     for (key, value) in env::vars() {
         if key == "API_URL" {
             let line = format!(
-                "pub const {}: &'static str = \"{}\";\n",
+                "pub const {}: &str = \"{}\";\n",
                 key,
                 value.replace("\"", "\\\"")
             );
             f.write_all(line.as_bytes()).unwrap();
             api_url_flag = true;
-            break
+            break;
         }
     }
     if !api_url_flag {
-        f.write_all(b"pub const API_URL: &'static str = \"http://localhost:3000/api/\";\n")
+        f.write_all(b"pub const API_URL: &str = \"http://localhost:3000/api/\";\n")
             .unwrap();
     }
 }
