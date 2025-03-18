@@ -57,14 +57,13 @@ cargo build
 
 ```sh
 cd front
-cargo run
+dx run
 ```
 
 ### Backend
 
 ```sh
-cd back
-cargo run
+cargo run -p back
 ```
 
 ## 🐳 Docker
