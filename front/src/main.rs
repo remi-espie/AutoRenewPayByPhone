@@ -10,6 +10,8 @@ use crate::types::AppContext;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
 
+const FAVICON: Asset = asset!("/assets/favicon.ico");
+
 fn main() {
     info!("starting app");
     launch(app);
@@ -24,6 +26,7 @@ fn app() -> Element {
     });
 
     rsx! {
+        document::Link { rel: "icon", href: FAVICON }
         Router::<Route> {}
     }
 }
