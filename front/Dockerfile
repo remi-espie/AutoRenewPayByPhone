@@ -1,5 +1,8 @@
 FROM rust:slim AS builder
 
+ARG API_URL
+ENV API_URL=$API_URL
+
 WORKDIR /usr/src/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates gcc libssl-dev pkg-config perl make curl
@@ -14,6 +17,8 @@ COPY src ./src
 COPY assets ./assets
 COPY ./Cargo.toml .
 COPY ./Dioxus.toml .
+
+RUN cargo check
 
 RUN dx build --platform web --release
 

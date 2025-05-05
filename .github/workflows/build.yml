@@ -46,6 +46,8 @@ jobs:
           push: true
           tags: ${{ steps.meta-front.outputs.tags }}
           labels: ${{ steps.meta-front.outputs.labels }}
+          build-args: |
+            "API_URL=https://autopbf.espie.dev/api"
 
     build-back:
       needs: lint
