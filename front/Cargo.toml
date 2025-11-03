@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4.38", features = ["serde"] }
 chrono-tz = "0.10.0"
-dioxus = { version = "0.6", features = ["web", "router"] }
+dioxus = { version = "0.7", features = ["web", "router"] }
 dioxus-logger = "0.6.0"
 gloo-storage = "0.3.0"
 reqwest = { version = "0.12.8", features = ["json"] }
