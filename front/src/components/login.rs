@@ -1,8 +1,8 @@
-use crate::local_storage::use_persistent;
 use crate::routes::Route;
 use crate::types::AppContext;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
+use dioxus_sdk_storage::use_persistent;
 
 #[component]
 pub(crate) fn Login() -> Element {
@@ -12,13 +12,13 @@ pub(crate) fn Login() -> Element {
     let mut loading = use_signal(|| false);
     let login = move || {
         spawn(async move {
-            info!("Bearer token: {}", bearer.get());
+            info!("Bearer token: {}", bearer());
             loading.set(true);
             let client = reqwest::Client::new();
 
             match client
                 .get(format!("{}healthz", context.read().api_url))
-                .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
+                .header("authorization", ["Bearer ", bearer().as_str()].concat())
                 .send()
                 .await
             {
@@ -42,7 +42,7 @@ pub(crate) fn Login() -> Element {
 
     rsx! {
         div { class: "container small-container", onvisible: move |_| {
-            if !bearer.get().is_empty() {
+            if !bearer().is_empty() {
                 info!("Bearer token found, checking...");
                 login();
             }
@@ -51,7 +51,7 @@ pub(crate) fn Login() -> Element {
         form { onsubmit: move |_| login(),
             div { class: "field",
                 label { class: "label", "Bearer token" }
-                input { name: "Bearer token", class: "input", placeholder: "Bearer token", required: true, oninput: move |e| bearer.set(e.value()), disabled: loading(), value: bearer.get() }
+                input { name: "Bearer token", class: "input", placeholder: "Bearer token", required: true, oninput: move |e| bearer.set(e.value()), disabled: loading(), value: bearer() }
                 }
             input { r#type: "submit", disabled: loading(), class:"button is-primary is-fullwidth", "Login" }
             }

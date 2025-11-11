@@ -5,7 +5,6 @@ use std::io::Write;
 
 fn main() {
     println!("cargo:rerun-if-changed=.env");
-    println!("cargo:rerun-if-env-changed=API_URL");
     let dest_path = "./src/env.rs";
     let mut f = File::create(dest_path).unwrap();
 
@@ -17,7 +16,8 @@ fn main() {
     for (key, value) in env::vars() {
         if key == "API_URL" {
             let line = format!(
-                "pub const API_URL: &str = \"{}\";\n",
+                "pub const {}: &str = \"{}\";\n",
+                key,
                 value.replace("\"", "\\\"")
             );
             f.write_all(line.as_bytes()).unwrap();

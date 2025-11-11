@@ -1,5 +1,4 @@
 use crate::check_login::check_login;
-use crate::local_storage::use_persistent;
 use crate::routes::Route;
 use crate::types;
 use crate::types::AppContext;
@@ -11,6 +10,7 @@ use dioxus::hooks::{use_context, use_signal};
 use dioxus::prelude::Signal;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
+use dioxus_sdk_storage::use_persistent;
 
 #[component]
 pub(crate) fn Park(name: String) -> Element {
@@ -69,7 +69,7 @@ pub(crate) fn Park(name: String) -> Element {
         let client = reqwest::Client::new();
         match client
             .post(format!("{}park", context.read().api_url))
-            .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
+            .header("authorization", ["Bearer ", bearer().as_str()].concat())
             .json(&types::Parking {
                 name: name.clone(),
                 duration: dur,
@@ -97,7 +97,7 @@ pub(crate) fn Park(name: String) -> Element {
     };
 
     rsx! {
-    div { class: "container is-max-tablet", onmounted: move |_| check_login(bearer.get(), api_url.clone()),
+    div { class: "container is-max-tablet", onmounted: move |_| check_login(bearer(), api_url.clone()),
         h1 { class: "is-size-1 has-text-centered", "Park ",
                 span { class: "has-text-weight-bold has-text-primary", "{name}"}
             }

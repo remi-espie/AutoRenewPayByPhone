@@ -7,14 +7,15 @@ edition = "2021"
 
 
 [dependencies]
-chrono = { version = "0.4.38", features = ["serde"] }
-chrono-tz = "0.10.0"
-dioxus = { version = "0.6", features = ["web", "router"] }
-dioxus-logger = "0.6.0"
+chrono = { version = "0.4.42", features = ["serde"] }
+chrono-tz = "0.10.4"
+dioxus = { version = "0.7.1", features = ["web", "router"] }
+dioxus-logger = "0.7.1"
+dioxus-sdk-storage = "0.7.0"
 gloo-storage = "0.3.0"
-reqwest = { version = "0.12.8", features = ["json"] }
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
+reqwest = { version = "0.12.24", features = ["json"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
 
 [build-dependencies]
 dotenv = "0.15.0"

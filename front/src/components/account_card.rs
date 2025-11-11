@@ -1,10 +1,10 @@
-use crate::local_storage::use_persistent;
 use crate::routes::Route;
 use crate::types::{AppContext, Config, ParkingSession, RenewSession};
 use chrono::{DateTime, Datelike};
 use chrono_tz::Europe::Paris;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
+use dioxus_sdk_storage::use_persistent;
 
 #[component]
 pub(crate) fn AccountCard_comp(account: Config) -> Element {
@@ -18,7 +18,7 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
     let mut expiry_time = use_signal(|| "".to_string());
     let context = use_context::<Signal<AppContext>>();
 
-    let _ = use_resource(move || {
+    use_resource(move || {
         let account = acc.clone();
         async move {
             {
@@ -31,7 +31,7 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
                         context.read().api_url,
                         account.name
                     ))
-                    .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
+                    .header("authorization", ["Bearer ", bearer().as_str()].concat())
                     .send()
                     .await
                 {
@@ -86,7 +86,7 @@ pub(crate) fn AccountCard_comp(account: Config) -> Element {
                         context.read().api_url,
                         account.name
                     ))
-                    .header("authorization", ["Bearer ", bearer.get().as_str()].concat())
+                    .header("authorization", ["Bearer ", bearer().as_str()].concat())
                     .send()
                     .await
                 {
