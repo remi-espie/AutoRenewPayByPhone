@@ -22,7 +22,7 @@ The project consists of two main components: `front` and `back`.
 ### 📥 Cloning the Repository
 
 ```sh
-git clone https://github.com/yourusername/AutoRenewPayByPhone.git
+git clone https://github.com/remi-espie/AutoRenewPayByPhone.git
 cd AutoRenewPayByPhone
 ```
 
@@ -70,7 +70,7 @@ cargo run -p back
 
 You can also build and run the project using Docker.
 
-### 🏗 Builing Docker Images
+### 🏗 Building Docker Images
 
 ```sh
 docker build -t autopbf/front ./front
