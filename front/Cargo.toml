@@ -13,7 +13,7 @@ dioxus = { version = "0.7.2", features = ["web", "router"] }
 dioxus-logger = "0.7.2"
 dioxus-sdk-storage = "0.7.0"
 gloo-storage = "0.3.0"
-reqwest = { version = "0.12.28", features = ["json"] }
+reqwest = { version = "0.13.1", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.148"
 
